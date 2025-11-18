@@ -1,0 +1,59 @@
+{
+  "name": "kx-dashboard",
+  "version": "1.0.0",
+  "description": "KX Dashboard - Native macOS Electron App for Torq Analytics",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:all": "electron-builder --mac --win --linux"
+  },
+  "keywords": [
+    "dashboard",
+    "torq",
+    "analytics",
+    "electron"
+  ],
+  "author": "KX Dashboard",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.1"
+  },
+  "build": {
+    "appId": "com.kx.dashboard",
+    "productName": "KX Dashboard",
+    "mac": {
+      "category": "public.app-category.business",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "assets/icon.icns",
+      "darkModeSupport": true
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png",
+      "category": "Office"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "api.js",
+      "index.html",
+      "styles.css",
+      "assets/**/*"
+    ]
+  }
+}
+
