@@ -245,6 +245,23 @@ enrollments_trend AS (
       ORDER BY enrollment_date
     ) AS trend
   FROM enrollments_daily
+),
+
+-- raw enrollments for client-side filtering
+raw_enrollments AS (
+  SELECT
+    ARRAY_AGG(
+      STRUCT(
+        user_id,
+        FORMAT_TIMESTAMP('%Y-%m-%d', created_ts) AS created_date,
+        pass_status,
+        title,
+        is_completed,
+        primary_segment
+      )
+      ORDER BY created_ts
+    ) AS raw_data
+  FROM current_reg
 )
 
 SELECT
@@ -324,7 +341,10 @@ SELECT
     ) AS segments,
 
     -- daily trend for current period
-    (SELECT trend FROM enrollments_trend) AS trend
+    (SELECT trend FROM enrollments_trend) AS trend,
+
+    -- raw enrollment data for client-side filtering
+    (SELECT raw_data FROM raw_enrollments) AS raw_data
 
   ) AS enrollments
 FROM current_agg ca, previous_agg pa;

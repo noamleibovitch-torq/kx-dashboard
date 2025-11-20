@@ -8,6 +8,27 @@ class DashboardApp {
     this.trendChart = null;
     this.segmentsPieChart = null;
     this.enrollmentTrendChart = null;
+    this.selectedSegment = null;
+    
+    // Color palette for segments
+    this.segmentColors = [
+      '#00FF88', // Bright green
+      '#00D9FF', // Cyan
+      '#FF6B6B', // Coral red
+      '#FFD93D', // Yellow
+      '#A259FF', // Purple
+      '#FF9CEE', // Pink
+      '#6BCF7F', // Light green
+      '#FF8C42', // Orange
+      '#4ECDC4', // Turquoise
+      '#95E1D3', // Mint
+      '#F38181', // Salmon
+      '#AA96DA', // Lavender
+      '#FCBAD3', // Light pink
+      '#FFFFD2', // Light yellow
+      '#A8D8EA', // Light blue
+      '#999999'  // Gray for others
+    ];
     
     this.init();
   }
@@ -47,6 +68,10 @@ class DashboardApp {
         this.updateDaysBackDisplay();
         this.load();
       }
+    });
+
+    document.getElementById('clearFilter').addEventListener('click', () => {
+      this.setSegmentFilter(null);
     });
   }
 
@@ -112,18 +137,95 @@ class DashboardApp {
     document.getElementById('lastUpdated').textContent = `Updated: ${timeString}`;
   }
 
+  // Data Filtering
+  getFilteredData() {
+    if (!this.selectedSegment || !this.data.enrollments.raw_data) {
+      return this.data;
+    }
+
+    // Filter raw enrollment data by selected segment
+    const rawData = this.data.enrollments.raw_data;
+    const filtered = rawData.filter(e => e.primary_segment === this.selectedSegment);
+
+    // Recalculate metrics based on filtered data
+    const filteredEnrollments = {
+      ...this.data.enrollments,
+      current: {
+        total_enrollments: filtered.length,
+        unique_users: new Set(filtered.map(e => e.user_id)).size,
+        completed_passed: filtered.filter(e => e.is_completed && e.pass_status === 'passed').length,
+        completed_failed: filtered.filter(e => e.is_completed && e.pass_status === 'failed').length,
+        in_progress: filtered.filter(e => e.pass_status === 'in_progress').length,
+        not_started: filtered.filter(e => e.pass_status === 'not_started').length
+      }
+    };
+
+    // Recalculate guides distribution
+    const guidesCounts = {};
+    filtered.forEach(e => {
+      guidesCounts[e.title] = (guidesCounts[e.title] || 0) + 1;
+    });
+    
+    const guidesArray = Object.entries(guidesCounts)
+      .map(([title, count]) => ({
+        title,
+        count,
+        percent: filtered.length > 0 ? Math.round(count * 100 / filtered.length) : 0
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    const topGuides = guidesArray.slice(0, 5);
+    const othersCount = guidesArray.slice(5).reduce((sum, g) => sum + g.count, 0);
+    const othersPercent = filtered.length > 0 ? Math.round(othersCount * 100 / filtered.length) : 0;
+
+    filteredEnrollments.guides = {
+      top: topGuides,
+      others: { count: othersCount, percent: othersPercent }
+    };
+
+    // Recalculate daily trend
+    const dailyData = {};
+    filtered.forEach(e => {
+      if (!dailyData[e.created_date]) {
+        dailyData[e.created_date] = {
+          total_enrollments: 0,
+          completed_passed: 0,
+          completed_failed: 0,
+          in_progress: 0,
+          not_started: 0
+        };
+      }
+      dailyData[e.created_date].total_enrollments++;
+      if (e.is_completed && e.pass_status === 'passed') dailyData[e.created_date].completed_passed++;
+      if (e.is_completed && e.pass_status === 'failed') dailyData[e.created_date].completed_failed++;
+      if (e.pass_status === 'in_progress') dailyData[e.created_date].in_progress++;
+      if (e.pass_status === 'not_started') dailyData[e.created_date].not_started++;
+    });
+
+    filteredEnrollments.trend = Object.entries(dailyData)
+      .map(([date, metrics]) => ({ date, ...metrics }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    return {
+      ...this.data,
+      enrollments: filteredEnrollments
+    };
+  }
+
   // Rendering
   render() {
     if (!this.data) return;
 
-    this.renderKPIs();
-    this.renderEnrollments();
-    this.renderSegments();
+    const displayData = this.getFilteredData();
+
+    this.renderKPIs(displayData);
+    this.renderEnrollments(displayData);
+    this.renderSegments(); // Always show unfiltered segments
     this.renderLabs();
   }
 
-  renderKPIs() {
-    const { enrollments, labs } = this.data;
+  renderKPIs(displayData = this.data) {
+    const { enrollments, labs } = displayData;
     const kpis = [
       {
         label: 'Total Enrollments',
@@ -210,8 +312,8 @@ class DashboardApp {
     `;
   }
 
-  renderEnrollments() {
-    const { enrollments } = this.data;
+  renderEnrollments(displayData = this.data) {
+    const { enrollments } = displayData;
     
     // Top Guides
     const maxCount = Math.max(...enrollments.guides.top.map(g => g.count), enrollments.guides.others.count);
@@ -335,6 +437,33 @@ class DashboardApp {
     `;
   }
 
+  getSegmentColor(index) {
+    return this.segmentColors[index % this.segmentColors.length];
+  }
+
+  setSegmentFilter(segmentName) {
+    if (this.selectedSegment === segmentName) {
+      // Toggle off if clicking the same segment
+      this.selectedSegment = null;
+    } else {
+      this.selectedSegment = segmentName;
+    }
+    this.updateFilterDisplay();
+    this.render();
+  }
+
+  updateFilterDisplay() {
+    const filterElement = document.getElementById('segmentFilter');
+    const filterNameElement = document.getElementById('filterSegmentName');
+    
+    if (this.selectedSegment) {
+      filterNameElement.textContent = this.selectedSegment;
+      filterElement.style.display = 'flex';
+    } else {
+      filterElement.style.display = 'none';
+    }
+  }
+
   renderSegments() {
     const { segments } = this.data.enrollments;
     
@@ -342,12 +471,12 @@ class DashboardApp {
     this.renderSegmentsPieChart(segments.current);
     
     // Render legend
-    const legendHTML = segments.current.map(seg => {
+    const legendHTML = segments.current.map((seg, index) => {
       const segmentName = seg.segment || '(none)';
-      const isTorq = segmentName.toLowerCase().includes('torq');
-      const color = isTorq ? '#00FF88' : '#999999';
+      const color = this.getSegmentColor(index);
+      const isSelected = this.selectedSegment === segmentName;
       return `
-        <div class="segment-legend-item">
+        <div class="segment-legend-item ${isSelected ? 'selected' : ''}" data-segment="${segmentName}">
           <div class="segment-legend-dot" style="background: ${color};"></div>
           <div class="segment-legend-label">${segmentName}</div>
           <div class="segment-legend-value">${seg.count} (${seg.percent}%)</div>
@@ -356,6 +485,14 @@ class DashboardApp {
     }).join('');
     
     document.getElementById('segmentsLegend').innerHTML = legendHTML;
+    
+    // Add click handlers to legend items
+    document.querySelectorAll('.segment-legend-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const segmentName = item.dataset.segment;
+        this.setSegmentFilter(segmentName);
+      });
+    });
   }
 
   renderSegmentsPieChart(segments) {
@@ -368,10 +505,7 @@ class DashboardApp {
 
     const labels = segments.map(s => s.segment || '(none)');
     const data = segments.map(s => s.percent);
-    const colors = segments.map(s => {
-      const segmentName = s.segment || '(none)';
-      return segmentName.toLowerCase().includes('torq') ? '#00FF88' : '#999999';
-    });
+    const colors = segments.map((s, index) => this.getSegmentColor(index));
 
     this.segmentsPieChart = new Chart(ctx, {
       type: 'pie',
@@ -397,6 +531,13 @@ class DashboardApp {
                 return context.label + ': ' + context.parsed + '%';
               }
             }
+          }
+        },
+        onClick: (event, activeElements) => {
+          if (activeElements.length > 0) {
+            const index = activeElements[0].index;
+            const segmentName = labels[index];
+            this.setSegmentFilter(segmentName);
           }
         }
       }

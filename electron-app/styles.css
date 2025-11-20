@@ -106,6 +106,48 @@ body {
   border-left: 1px solid var(--border-color);
 }
 
+/* Segment Filter */
+.segment-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(0, 255, 136, 0.15);
+  border: 1px solid var(--accent-primary);
+  border-radius: 20px;
+  font-size: 13px;
+}
+
+.segment-filter .filter-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.segment-filter .filter-segment {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.clear-filter-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: var(--text-primary);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.clear-filter-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
 /* Error Banner */
 .error-banner {
   display: none;
@@ -435,6 +477,19 @@ body {
   padding: 8px 12px;
   background: var(--bg-card);
   border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.segment-legend-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateX(4px);
+}
+
+.segment-legend-item.selected {
+  border-color: var(--accent-primary);
+  background: rgba(0, 255, 136, 0.1);
 }
 
 .segment-legend-dot {
