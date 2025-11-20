@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://hooks.torq.io">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://hooks.torq.io">
   <title>KX Dashboard</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -48,44 +48,34 @@
       </div>
     </div>
 
-    <!-- Middle Section: Enrollments & Segments -->
-    <div class="content-grid">
-      <!-- Enrollments -->
-      <div class="section">
-        <h2 class="section-title">Enrollments</h2>
-        
-        <!-- Current vs Previous -->
-        <div class="subsection">
-          <h3 class="subsection-title">Current vs Previous Period</h3>
-          <div class="comparison-grid" id="enrollmentComparison">
-            <!-- Comparison will be inserted here -->
-          </div>
-        </div>
-
+    <!-- Enrollments Section -->
+    <div class="section">
+      <h2 class="section-title">Enrollments</h2>
+      <div class="enrollments-row">
         <!-- Top Guides -->
-        <div class="subsection">
+        <div class="subsection enrollments-chart-col">
           <h3 class="subsection-title">Top Guides</h3>
           <div id="guidesChart">
             <!-- Guide bars will be inserted here -->
           </div>
         </div>
-      </div>
 
-      <!-- Segments -->
-      <div class="section">
-        <h2 class="section-title">Segments</h2>
-        
-        <div class="subsection">
-          <h3 class="subsection-title">Current Period</h3>
-          <div id="segmentsCurrent">
-            <!-- Current segments will be inserted here -->
+        <!-- Segments Pie Chart -->
+        <div class="subsection enrollments-chart-col">
+          <h3 class="subsection-title">Segments</h3>
+          <div class="segments-chart-container-small">
+            <canvas id="segmentsPieChart"></canvas>
+          </div>
+          <div id="segmentsLegend" class="segments-legend-compact">
+            <!-- Legend will be inserted here -->
           </div>
         </div>
 
-        <div class="subsection">
-          <h3 class="subsection-title">Previous Period</h3>
-          <div id="segmentsPrevious">
-            <!-- Previous segments will be inserted here -->
+        <!-- Enrollment Trend -->
+        <div class="subsection enrollments-chart-col">
+          <h3 class="subsection-title">Daily Trend</h3>
+          <div class="chart-container">
+            <canvas id="enrollmentTrendChart"></canvas>
           </div>
         </div>
       </div>
@@ -94,23 +84,20 @@
     <!-- Labs Section -->
     <div class="section">
       <h2 class="section-title">Labs Activity</h2>
-      <div class="labs-grid">
+      <div class="labs-row">
         <!-- Today's Metrics -->
-        <div class="subsection">
+        <div class="subsection labs-metrics-col">
           <h3 class="subsection-title">Today's Labs</h3>
           <div class="labs-metrics" id="labsMetrics">
             <!-- Lab metrics will be inserted here -->
           </div>
         </div>
 
-        <!-- Trend Chart -->
-        <div class="subsection">
-          <h3 class="subsection-title">Activity Trend</h3>
+        <!-- Labs Trend Chart -->
+        <div class="subsection labs-trend-col">
+          <h3 class="subsection-title">Daily Checks Trend</h3>
           <div class="chart-container">
             <canvas id="trendChart"></canvas>
-          </div>
-          <div class="trend-table" id="trendTable">
-            <!-- Trend table will be inserted here -->
           </div>
         </div>
       </div>

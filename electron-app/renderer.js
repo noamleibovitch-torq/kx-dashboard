@@ -6,6 +6,8 @@ class DashboardApp {
     this.daysBack = this.loadDaysBack();
     this.refreshTimer = null;
     this.trendChart = null;
+    this.segmentsPieChart = null;
+    this.enrollmentTrendChart = null;
     
     this.init();
   }
@@ -125,43 +127,59 @@ class DashboardApp {
     const kpis = [
       {
         label: 'Total Enrollments',
+        sublabel: `Last ${enrollments.window.days_back} days`,
         value: enrollments.current.total_enrollments,
+        previousValue: enrollments.previous.total_enrollments,
         delta: enrollments.delta.total_enrollments
       },
       {
         label: 'Unique Users',
+        sublabel: `Last ${enrollments.window.days_back} days`,
         value: enrollments.current.unique_users,
+        previousValue: enrollments.previous.unique_users,
         delta: enrollments.delta.unique_users
       },
       {
         label: 'Completed Passed',
+        sublabel: `Last ${enrollments.window.days_back} days`,
         value: enrollments.current.completed_passed,
+        previousValue: enrollments.previous.completed_passed,
         delta: enrollments.delta.completed_passed
       },
       {
         label: 'In Progress',
+        sublabel: `Last ${enrollments.window.days_back} days`,
         value: enrollments.current.in_progress,
+        previousValue: enrollments.previous.in_progress,
         delta: enrollments.delta.in_progress
       },
       {
-        label: 'Labs Running',
-        value: labs.current.labs_running_now,
+        label: 'Labs Running Now',
+        sublabel: 'Current',
+        value: labs.today.labs_running_now,
+        previousValue: null,
         delta: null
       },
       {
         label: 'Total Attempts',
-        value: labs.current.total_attempts,
+        sublabel: 'Today',
+        value: labs.today.total_attempts,
+        previousValue: labs.previous.total_attempts,
         delta: labs.delta.total_attempts
       },
       {
         label: 'Passed Checks',
-        value: labs.current.passed_checks_percent,
+        sublabel: 'Today',
+        value: labs.today.passed_checks_percent,
+        previousValue: labs.previous.passed_checks_percent,
         delta: labs.delta.passed_checks_percent,
         suffix: '%'
       },
       {
         label: 'Failed Checks',
-        value: labs.current.failed_checks_percent,
+        sublabel: 'Today',
+        value: labs.today.failed_checks_percent,
+        previousValue: null,
         delta: null,
         suffix: '%'
       }
@@ -171,17 +189,19 @@ class DashboardApp {
     document.getElementById('kpiGrid').innerHTML = html;
   }
 
-  createKPICard({ label, value, delta, suffix = '' }) {
+  createKPICard({ label, sublabel, value, previousValue, delta, suffix = '' }) {
     const deltaHTML = delta ? `
       <div class="kpi-delta ${delta.abs >= 0 ? 'positive' : 'negative'}">
         <span>${delta.abs >= 0 ? '▲' : '▼'}</span>
-        <span>${delta.percent !== null ? Math.abs(delta.percent) + '%' : Math.abs(delta.abs)}</span>
+        <span>${Math.abs(delta.abs)}${suffix}</span>
+        ${previousValue !== null ? `<span class="previous-value">(prev: ${previousValue}${suffix})</span>` : ''}
       </div>
     ` : '<div style="height: 24px;"></div>';
 
     return `
       <div class="kpi-card">
         <div class="kpi-label">${label}</div>
+        <div class="kpi-sublabel">${sublabel}</div>
         <div class="kpi-value">
           ${value}${suffix ? `<span class="suffix">${suffix}</span>` : ''}
         </div>
@@ -193,45 +213,6 @@ class DashboardApp {
   renderEnrollments() {
     const { enrollments } = this.data;
     
-    // Comparison
-    const currentMetrics = [
-      { label: 'Total', value: enrollments.current.total_enrollments },
-      { label: 'Unique Users', value: enrollments.current.unique_users },
-      { label: 'Completed', value: enrollments.current.completed_passed },
-      { label: 'In Progress', value: enrollments.current.in_progress },
-      { label: 'Not Started', value: enrollments.current.not_started }
-    ];
-
-    const previousMetrics = [
-      { label: 'Total', value: enrollments.previous.total_enrollments },
-      { label: 'Unique Users', value: enrollments.previous.unique_users },
-      { label: 'Completed', value: enrollments.previous.completed_passed },
-      { label: 'In Progress', value: enrollments.previous.in_progress },
-      { label: 'Not Started', value: enrollments.previous.not_started }
-    ];
-
-    const comparisonHTML = `
-      <div class="comparison-column">
-        <div class="comparison-header current">Current (${enrollments.window.days_back}d)</div>
-        ${currentMetrics.map(m => `
-          <div class="metric-row">
-            <span class="metric-label">${m.label}</span>
-            <span class="metric-value">${m.value}</span>
-          </div>
-        `).join('')}
-      </div>
-      <div class="comparison-column">
-        <div class="comparison-header previous">Previous (${enrollments.window.days_back}d)</div>
-        ${previousMetrics.map(m => `
-          <div class="metric-row">
-            <span class="metric-label">${m.label}</span>
-            <span class="metric-value">${m.value}</span>
-          </div>
-        `).join('')}
-      </div>
-    `;
-    document.getElementById('enrollmentComparison').innerHTML = comparisonHTML;
-
     // Top Guides
     const maxCount = Math.max(...enrollments.guides.top.map(g => g.count), enrollments.guides.others.count);
     const guidesHTML = [
@@ -239,6 +220,124 @@ class DashboardApp {
       this.createGuideBar({ title: 'Others', count: enrollments.guides.others.count, percent: enrollments.guides.others.percent }, maxCount, true)
     ].join('');
     document.getElementById('guidesChart').innerHTML = guidesHTML;
+    
+    // Enrollment trend chart - using mock daily data based on current/previous
+    this.renderEnrollmentTrendChart(enrollments);
+  }
+
+  renderEnrollmentTrendChart(enrollments) {
+    const ctx = document.getElementById('enrollmentTrendChart');
+    
+    // Destroy existing chart
+    if (this.enrollmentTrendChart) {
+      this.enrollmentTrendChart.destroy();
+    }
+
+    // Generate daily data for the period
+    const daysBack = enrollments.window.days_back;
+    const dailyData = [];
+    
+    // Create daily breakdown (estimate based on current totals)
+    const currentStart = new Date(enrollments.window.current.start_iso);
+    const currentEnd = new Date(enrollments.window.current.end_iso);
+    const daysDiff = Math.max(1, Math.ceil((currentEnd - currentStart) / (1000 * 60 * 60 * 24)));
+    
+    // Distribute enrollments across days
+    const dailyCompleted = Math.floor(enrollments.current.completed_passed / daysDiff);
+    const dailyInProgress = Math.floor(enrollments.current.in_progress / daysDiff);
+    const dailyNotStarted = Math.floor(enrollments.current.not_started / daysDiff);
+    
+    for (let i = 0; i < daysDiff; i++) {
+      const date = new Date(currentStart);
+      date.setDate(date.getDate() + i);
+      dailyData.push({
+        date: date.toISOString().split('T')[0],
+        completed_passed: dailyCompleted,
+        in_progress: dailyInProgress,
+        not_started: dailyNotStarted
+      });
+    }
+
+    this.enrollmentTrendChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: dailyData.map(point => this.formatDate(point.date)),
+        datasets: [
+          {
+            label: 'Completed',
+            data: dailyData.map(point => point.completed_passed),
+            backgroundColor: '#00FF88',
+            borderColor: '#00FF88',
+            borderWidth: 1
+          },
+          {
+            label: 'In Progress',
+            data: dailyData.map(point => point.in_progress),
+            backgroundColor: '#00D9FF',
+            borderColor: '#00D9FF',
+            borderWidth: 1
+          },
+          {
+            label: 'Not Started',
+            data: dailyData.map(point => point.not_started),
+            backgroundColor: '#999999',
+            borderColor: '#999999',
+            borderWidth: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            labels: {
+              color: '#999999',
+              font: { size: 12 }
+            }
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+              footer: function(tooltipItems) {
+                let total = 0;
+                tooltipItems.forEach(function(tooltipItem) {
+                  total += tooltipItem.parsed.y;
+                });
+                return 'Total: ' + total;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            ticks: { 
+              color: '#999999',
+              font: { size: 11 }
+            },
+            grid: { 
+              color: 'rgba(255, 255, 255, 0.1)',
+              drawBorder: false
+            }
+          },
+          x: {
+            stacked: true,
+            ticks: { 
+              color: '#999999',
+              font: { size: 10 },
+              maxRotation: 45,
+              minRotation: 45
+            },
+            grid: { 
+              display: false
+            }
+          }
+        }
+      }
+    });
   }
 
   createGuideBar(guide, maxCount, isOthers = false) {
@@ -261,34 +360,67 @@ class DashboardApp {
   renderSegments() {
     const { segments } = this.data.enrollments;
     
-    const currentHTML = segments.current.map(seg => this.createSegmentItem(seg)).join('');
-    const previousHTML = segments.previous.map(seg => this.createSegmentItem(seg)).join('');
+    // Render pie chart for current segments
+    this.renderSegmentsPieChart(segments.current);
     
-    document.getElementById('segmentsCurrent').innerHTML = currentHTML;
-    document.getElementById('segmentsPrevious').innerHTML = previousHTML;
+    // Render legend
+    const legendHTML = segments.current.map(seg => {
+      const isTorq = seg.segment.toLowerCase().includes('torq');
+      const color = isTorq ? '#00FF88' : '#999999';
+      return `
+        <div class="segment-legend-item">
+          <div class="segment-legend-dot" style="background: ${color};"></div>
+          <div class="segment-legend-label">${seg.segment}</div>
+          <div class="segment-legend-value">${seg.count} (${seg.percent}%)</div>
+        </div>
+      `;
+    }).join('');
+    
+    document.getElementById('segmentsLegend').innerHTML = legendHTML;
   }
 
-  createSegmentItem(segment) {
-    const isTorq = segment.segment.toLowerCase().includes('torq');
-    const color = isTorq ? '#00FF88' : '#999999';
+  renderSegmentsPieChart(segments) {
+    const ctx = document.getElementById('segmentsPieChart');
     
-    return `
-      <div class="segment-item">
-        <div class="segment-header">
-          <div class="segment-name">
-            <div class="segment-dot ${isTorq ? 'torq' : 'other'}"></div>
-            <span>${segment.segment}</span>
-          </div>
-          <div class="segment-stats">
-            <span class="segment-count">${segment.count}</span>
-            <span class="segment-percent">(${segment.percent}%)</span>
-          </div>
-        </div>
-        <div class="segment-bar-container">
-          <div class="segment-bar" style="width: ${segment.percent}%; background: ${color};"></div>
-        </div>
-      </div>
-    `;
+    // Destroy existing chart
+    if (this.segmentsPieChart) {
+      this.segmentsPieChart.destroy();
+    }
+
+    const labels = segments.map(s => s.segment);
+    const data = segments.map(s => s.percent);
+    const colors = segments.map(s => 
+      s.segment.toLowerCase().includes('torq') ? '#00FF88' : '#999999'
+    );
+
+    this.segmentsPieChart = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: colors,
+          borderColor: '#0D0D0D',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return context.label + ': ' + context.parsed + '%';
+              }
+            }
+          }
+        }
+      }
+    });
   }
 
   renderLabs() {
@@ -350,6 +482,37 @@ class DashboardApp {
     }
   }
 
+  aggregateTrendByDay(trendData) {
+    // Group trend data by day
+    const dailyData = {};
+    
+    trendData.forEach(point => {
+      const date = new Date(point.time);
+      const dateKey = date.toISOString().split('T')[0]; // Get YYYY-MM-DD
+      
+      if (!dailyData[dateKey]) {
+        dailyData[dateKey] = {
+          date: dateKey,
+          passed_checks: 0,
+          failed_checks: 0,
+          total_attempts: 0,
+          labs_running: point.labs_running,
+          created_labs: 0,
+          resolved_labs: 0
+        };
+      }
+      
+      dailyData[dateKey].passed_checks += point.passed_checks;
+      dailyData[dateKey].failed_checks += point.failed_checks;
+      dailyData[dateKey].total_attempts += point.total_attempts;
+      dailyData[dateKey].created_labs += point.created_labs;
+      dailyData[dateKey].resolved_labs += point.resolved_labs;
+    });
+    
+    // Convert to array and sort by date
+    return Object.values(dailyData).sort((a, b) => a.date.localeCompare(b.date));
+  }
+
   renderTrendChart(trendData) {
     const ctx = document.getElementById('trendChart');
     
@@ -363,17 +526,29 @@ class DashboardApp {
       return;
     }
 
+    // Aggregate by day
+    const dailyData = this.aggregateTrendByDay(trendData);
+
     this.trendChart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: trendData.map(point => this.formatTime(point.time)),
-        datasets: [{
-          label: 'Total Attempts',
-          data: trendData.map(point => point.total_attempts),
-          backgroundColor: '#00D9FF',
-          borderColor: '#00D9FF',
-          borderWidth: 1
-        }]
+        labels: dailyData.map(point => this.formatDate(point.date)),
+        datasets: [
+          {
+            label: 'Passed Checks',
+            data: dailyData.map(point => point.passed_checks),
+            backgroundColor: '#00FF88',
+            borderColor: '#00FF88',
+            borderWidth: 1
+          },
+          {
+            label: 'Failed Checks',
+            data: dailyData.map(point => point.failed_checks),
+            backgroundColor: '#FF006E',
+            borderColor: '#FF006E',
+            borderWidth: 1
+          }
+        ]
       },
       options: {
         responsive: true,
@@ -384,10 +559,24 @@ class DashboardApp {
               color: '#999999',
               font: { size: 12 }
             }
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+              footer: function(tooltipItems) {
+                let total = 0;
+                tooltipItems.forEach(function(tooltipItem) {
+                  total += tooltipItem.parsed.y;
+                });
+                return 'Total: ' + total;
+              }
+            }
           }
         },
         scales: {
           y: {
+            stacked: true,
             beginAtZero: true,
             ticks: { 
               color: '#999999',
@@ -399,6 +588,7 @@ class DashboardApp {
             }
           },
           x: {
+            stacked: true,
             ticks: { 
               color: '#999999',
               font: { size: 10 },
@@ -412,6 +602,13 @@ class DashboardApp {
         }
       }
     });
+  }
+
+  formatDate(dateString) {
+    const date = new Date(dateString);
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    return `${month}/${day}`;
   }
 
   formatTime(isoString) {

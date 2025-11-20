@@ -202,6 +202,13 @@ body {
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 1.2px;
+  margin-bottom: 4px;
+}
+
+.kpi-sublabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent-cyan);
   margin-bottom: 8px;
 }
 
@@ -222,7 +229,7 @@ body {
 .kpi-delta {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   padding: 4px 8px;
   border-radius: 6px;
   font-size: 14px;
@@ -239,12 +246,37 @@ body {
   background: rgba(255, 0, 110, 0.15);
 }
 
-/* Content Grid */
-.content-grid {
+.kpi-delta .previous-value {
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+/* Enrollments Row */
+.enrollments-row {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 24px;
-  margin-bottom: 24px;
+  margin-bottom: 0;
+}
+
+.enrollments-chart-col {
+  min-width: 0;
+}
+
+/* Labs Row */
+.labs-row {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 24px;
+}
+
+.labs-metrics-col {
+  min-width: 0;
+}
+
+.labs-trend-col {
+  min-width: 0;
 }
 
 .subsection {
@@ -260,50 +292,82 @@ body {
   margin-bottom: 12px;
 }
 
-/* Comparison Grid */
-.comparison-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+/* Enrollment Tiles */
+.enrollment-tile {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
 }
 
-.comparison-column {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.comparison-header {
+.tile-label {
   font-size: 13px;
   font-weight: 500;
+  color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.2px;
+  margin-bottom: 12px;
 }
 
-.comparison-header.current {
+.tile-values {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.tile-current,
+.tile-previous {
+  flex: 1;
+  text-align: center;
+}
+
+.tile-period {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tile-current .tile-period {
   color: var(--accent-cyan);
 }
 
-.comparison-header.previous {
-  color: var(--text-secondary);
-}
-
-.metric-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-}
-
-.metric-label {
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
-.metric-value {
-  font-size: 16px;
-  font-weight: 600;
+.tile-number {
+  font-size: 32px;
+  font-weight: bold;
   color: var(--text-primary);
+}
+
+.tile-vs {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+.tile-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tile-delta.positive {
+  color: var(--accent-green);
+  background: rgba(0, 255, 136, 0.15);
+}
+
+.tile-delta.negative {
+  color: var(--accent-pink);
+  background: rgba(255, 0, 110, 0.15);
 }
 
 /* Guide Chart */
@@ -351,73 +415,50 @@ body {
   background: var(--text-secondary);
 }
 
-/* Segment Item */
-.segment-item {
-  margin-bottom: 10px;
+/* Segments Chart - Compact version */
+.segments-chart-container-small {
+  max-width: 200px;
+  margin: 0 auto 16px;
+  padding: 10px;
 }
 
-.segment-header {
+.segments-legend-compact {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.segment-name {
-  display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
+}
+
+.segment-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border-radius: 8px;
+}
+
+.segment-legend-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.segment-legend-label {
+  flex: 1;
   font-size: 14px;
   font-weight: 500;
-}
-
-.segment-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.segment-dot.torq {
-  background: var(--accent-green);
-}
-
-.segment-dot.other {
-  background: var(--text-secondary);
-}
-
-.segment-stats {
-  font-size: 14px;
-}
-
-.segment-count {
-  font-weight: 600;
   color: var(--text-primary);
 }
 
-.segment-percent {
-  color: var(--text-secondary);
-  margin-left: 4px;
+.segment-legend-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
 }
 
-.segment-bar-container {
-  height: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.segment-bar {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-
-/* Labs Section */
-.labs-grid {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 24px;
-}
+/* Labs Grid - deprecated, using labs-row now */
 
 .labs-metrics {
   display: flex;
