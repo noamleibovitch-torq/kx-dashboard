@@ -343,12 +343,13 @@ class DashboardApp {
     
     // Render legend
     const legendHTML = segments.current.map(seg => {
-      const isTorq = seg.segment.toLowerCase().includes('torq');
+      const segmentName = seg.segment || '(none)';
+      const isTorq = segmentName.toLowerCase().includes('torq');
       const color = isTorq ? '#00FF88' : '#999999';
       return `
         <div class="segment-legend-item">
           <div class="segment-legend-dot" style="background: ${color};"></div>
-          <div class="segment-legend-label">${seg.segment}</div>
+          <div class="segment-legend-label">${segmentName}</div>
           <div class="segment-legend-value">${seg.count} (${seg.percent}%)</div>
         </div>
       `;
@@ -365,11 +366,12 @@ class DashboardApp {
       this.segmentsPieChart.destroy();
     }
 
-    const labels = segments.map(s => s.segment);
+    const labels = segments.map(s => s.segment || '(none)');
     const data = segments.map(s => s.percent);
-    const colors = segments.map(s => 
-      s.segment.toLowerCase().includes('torq') ? '#00FF88' : '#999999'
-    );
+    const colors = segments.map(s => {
+      const segmentName = s.segment || '(none)';
+      return segmentName.toLowerCase().includes('torq') ? '#00FF88' : '#999999';
+    });
 
     this.segmentsPieChart = new Chart(ctx, {
       type: 'pie',
