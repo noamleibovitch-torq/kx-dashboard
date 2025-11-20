@@ -22,14 +22,19 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
-  overflow-x: hidden;
+  overflow: hidden;
   -webkit-font-smoothing: antialiased;
+  height: 100vh;
 }
 
 .app-container {
   max-width: 1920px;
   margin: 0 auto;
-  padding: 32px;
+  padding: 12px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* Header */
@@ -37,12 +42,14 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
 }
 
-.header h1 {
-  font-size: 32px;
-  font-weight: bold;
+.header-logo {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
 }
 
 .controls {
@@ -65,38 +72,35 @@ body {
   letter-spacing: 1px;
 }
 
-.stepper {
+.period-selector {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
-.stepper button {
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
+.period-btn {
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
   border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
-  transition: background 0.2s;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
 }
 
-.stepper button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.15);
+.period-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--text-primary);
 }
 
-.stepper button:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.stepper-value {
-  width: 40px;
-  text-align: center;
-  font-size: 16px;
-  font-weight: bold;
+.period-btn.active {
+  background: #FFFFFF;
+  border-color: #FFFFFF;
+  color: #0D0D0D;
+  font-weight: 600;
 }
 
 .last-updated {
@@ -212,30 +216,36 @@ body {
 /* Section */
 .section {
   background: var(--bg-secondary);
-  border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 24px;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 8px;
+  flex-shrink: 1;
+  min-height: 0;
+}
+
+.section:last-child {
+  margin-bottom: 0;
 }
 
 .section-title {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: bold;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
 /* KPI Grid */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
   overflow-x: auto;
 }
 
 .kpi-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 20px;
+  border-radius: 10px;
+  padding: 10px 12px;
 }
 
 .kpi-label {
@@ -255,10 +265,10 @@ body {
 }
 
 .kpi-value {
-  font-size: 42px;
+  font-size: 28px;
   font-weight: bold;
   color: var(--text-primary);
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .kpi-value .suffix {
@@ -298,7 +308,7 @@ body {
 .enrollments-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 24px;
+  gap: 8px;
   margin-bottom: 0;
 }
 
@@ -309,8 +319,8 @@ body {
 /* Labs Row */
 .labs-row {
   display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 24px;
+  grid-template-columns: 280px 1fr;
+  gap: 8px;
 }
 
 .labs-metrics-col {
@@ -323,15 +333,15 @@ body {
 
 .subsection {
   background: var(--bg-card);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 0;
 }
 
 .subsection-title {
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 600;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
 }
 
 /* Enrollment Tiles */
@@ -458,25 +468,36 @@ body {
 }
 
 /* Segments Chart - Compact version */
+.segments-horizontal {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
 .segments-chart-container-small {
-  max-width: 200px;
-  margin: 0 auto 16px;
+  flex: 1;
+  min-width: 0;
   padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .segments-legend-compact {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
 }
 
 .segment-legend-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
+  gap: 8px;
+  padding: 6px 10px;
   background: var(--bg-card);
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
   border: 2px solid transparent;
@@ -493,21 +514,21 @@ body {
 }
 
 .segment-legend-dot {
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
 .segment-legend-label {
   flex: 1;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-primary);
 }
 
 .segment-legend-value {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -518,7 +539,7 @@ body {
 .labs-metrics {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .lab-metric {
@@ -558,8 +579,36 @@ body {
 /* Chart */
 .chart-container {
   position: relative;
-  height: 300px;
-  padding: 16px;
+  height: 180px;
+  padding: 8px;
+}
+
+.chart-container-small {
+  position: relative;
+  height: 140px;
+  padding: 6px;
+}
+
+/* Dual Trends Layout */
+.dual-trends {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trend-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.trend-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-left: 8px;
 }
 
 canvas {

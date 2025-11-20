@@ -3,7 +3,8 @@ class DashboardApp {
   constructor() {
     this.api = new DashboardAPI();
     this.data = null;
-    this.daysBack = this.loadDaysBack();
+    this.selectedPeriod = this.loadPeriod();
+    this.daysBack = this.calculateDaysBack(this.selectedPeriod);
     this.refreshTimer = null;
     this.trendChart = null;
     this.segmentsPieChart = null;
@@ -35,39 +36,58 @@ class DashboardApp {
 
   init() {
     this.setupEventListeners();
-    this.updateDaysBackDisplay();
+    this.updatePeriodDisplay();
     this.load();
     this.startAutoRefresh();
   }
 
   // Persistence
-  loadDaysBack() {
-    const saved = localStorage.getItem('daysBack');
-    return saved ? parseInt(saved, 10) : 7;
+  loadPeriod() {
+    const saved = localStorage.getItem('selectedPeriod');
+    return saved || '7';
   }
 
-  saveDaysBack() {
-    localStorage.setItem('daysBack', this.daysBack);
+  savePeriod() {
+    localStorage.setItem('selectedPeriod', this.selectedPeriod);
+  }
+
+  calculateDaysBack(period) {
+    if (period === '7') return 7;
+    if (period === '30') return 30;
+    if (period === 'Q') {
+      // Quarter = 90 days (approximately 3 months)
+      return 90;
+    }
+    if (period === 'YTD') {
+      // Year to Date - calculate days from Jan 1 to today
+      const now = new Date();
+      const startOfYear = new Date(now.getFullYear(), 0, 1);
+      const diffTime = Math.abs(now - startOfYear);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    }
+    return 7; // default
   }
 
   // Event Listeners
   setupEventListeners() {
-    document.getElementById('incrementDays').addEventListener('click', () => {
-      if (this.daysBack < 30) {
-        this.daysBack++;
-        this.saveDaysBack();
-        this.updateDaysBackDisplay();
+    // Period selector buttons
+    document.querySelectorAll('.period-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const period = btn.dataset.period;
+        console.log('Period changed to:', period);
+        
+        this.selectedPeriod = period;
+        this.daysBack = this.calculateDaysBack(period);
+        console.log('Days back calculated:', this.daysBack);
+        
+        this.savePeriod();
+        this.updatePeriodDisplay();
+        
+        // Refresh data from webhook
+        console.log('Triggering data refresh...');
         this.load();
-      }
-    });
-
-    document.getElementById('decrementDays').addEventListener('click', () => {
-      if (this.daysBack > 1) {
-        this.daysBack--;
-        this.saveDaysBack();
-        this.updateDaysBackDisplay();
-        this.load();
-      }
+      });
     });
 
     document.getElementById('clearFilter').addEventListener('click', () => {
@@ -75,19 +95,28 @@ class DashboardApp {
     });
   }
 
-  updateDaysBackDisplay() {
-    document.getElementById('daysBackValue').textContent = this.daysBack;
-    document.getElementById('incrementDays').disabled = this.daysBack >= 30;
-    document.getElementById('decrementDays').disabled = this.daysBack <= 1;
+  updatePeriodDisplay() {
+    // Update active button
+    document.querySelectorAll('.period-btn').forEach(btn => {
+      if (btn.dataset.period === this.selectedPeriod) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
   }
 
   // Data Loading
   async load() {
     try {
-      this.showLoading(this.data === null);
+      // Always show loading indicator
+      this.showLoading(true);
       this.hideError();
 
+      console.log('Fetching dashboard data for', this.daysBack, 'days...');
       const result = await this.api.fetchDashboard(this.daysBack);
+      console.log('Data received:', result);
+      
       this.data = result;
       this.render();
       this.updateLastUpdated();
@@ -174,8 +203,8 @@ class DashboardApp {
       }))
       .sort((a, b) => b.count - a.count);
 
-    const topGuides = guidesArray.slice(0, 5);
-    const othersCount = guidesArray.slice(5).reduce((sum, g) => sum + g.count, 0);
+    const topGuides = guidesArray.slice(0, 6);
+    const othersCount = guidesArray.slice(6).reduce((sum, g) => sum + g.count, 0);
     const othersPercent = filtered.length > 0 ? Math.round(othersCount * 100 / filtered.length) : 0;
 
     filteredEnrollments.guides = {
@@ -263,27 +292,26 @@ class DashboardApp {
         delta: null
       },
       {
+        label: 'Today\'s Labs',
+        sublabel: `Created: ${labs.today.created_labs} | Resolved: ${labs.today.resolved_labs}`,
+        value: labs.today.created_labs + labs.today.resolved_labs,
+        previousValue: null,
+        delta: null
+      },
+      {
         label: 'Total Attempts',
-        sublabel: 'Today',
+        sublabel: `Today - Passed: ${labs.today.passed_checks_percent}% | Failed: ${labs.today.failed_checks_percent}%`,
         value: labs.today.total_attempts,
-        previousValue: labs.previous.total_attempts,
-        delta: labs.delta.total_attempts
+        previousValue: null,
+        delta: null
       },
       {
-        label: 'Passed Checks',
-        sublabel: 'Today',
-        value: labs.today.passed_checks_percent,
-        previousValue: labs.previous.passed_checks_percent,
-        delta: labs.delta.passed_checks_percent,
-        suffix: '%'
-      },
-      {
-        label: 'Failed Checks',
-        sublabel: 'Today',
-        value: labs.today.failed_checks_percent,
+        label: 'Avg Solve Time',
+        sublabel: `Today vs ${enrollments.window.days_back}d Period`,
+        value: `${labs.today.avg_resolve_hours.toFixed(1)}/${labs.current.avg_resolve_hours.toFixed(1)}`,
         previousValue: null,
         delta: null,
-        suffix: '%'
+        suffix: 'h'
       }
     ];
 
@@ -546,65 +574,19 @@ class DashboardApp {
 
   renderLabs() {
     const { labs } = this.data;
-    
-    // Today's metrics
-    const metrics = [
-      { label: 'Labs Running Now', value: labs.today.labs_running_now, color: 'cyan' },
-      { label: 'Created Labs', value: labs.today.created_labs, color: '' },
-      { label: 'Resolved Labs', value: labs.today.resolved_labs, color: '' },
-      { label: 'Total Attempts', value: labs.today.total_attempts, color: '' },
-      { label: 'Passed Checks', value: `${labs.today.passed_checks_percent}%`, color: 'green' },
-      { label: 'Failed Checks', value: `${labs.today.failed_checks_percent}%`, color: 'pink' },
-      { label: 'Avg Resolve Time', value: `${labs.today.avg_resolve_hours.toFixed(1)}h`, color: 'pink' }
-    ];
 
-    const metricsHTML = metrics.map((m, i) => {
-      const divider = (i === 3 || i === 5) ? '<div class="divider"></div>' : '';
-      return `
-        ${divider}
-        <div class="lab-metric">
-          <span class="lab-metric-label">${m.label}</span>
-          <span class="lab-metric-value ${m.color}">${m.value}</span>
-        </div>
-      `;
-    }).join('');
-    document.getElementById('labsMetrics').innerHTML = metricsHTML;
-
-    // Trend chart
+    // Trend chart only - metrics are now in KPI tiles
     this.renderTrendChart(labs.trend);
-    
-    // Trend table
-    if (labs.trend.length > 0 && labs.trend.length <= 10) {
-      const tableHTML = `
-        <table>
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Running</th>
-              <th>Attempts</th>
-              <th>Passed</th>
-              <th>Failed</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${labs.trend.map(point => `
-              <tr>
-                <td>${this.formatTime(point.time)}</td>
-                <td>${point.labs_running}</td>
-                <td>${point.total_attempts}</td>
-                <td class="green">${point.passed_checks}</td>
-                <td class="pink">${point.failed_checks}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
-      document.getElementById('trendTable').innerHTML = tableHTML;
-    }
   }
 
   aggregateTrendByDay(trendData) {
-    // Group trend data by day
+    // Check if data is already daily-aggregated (has 'date' field instead of 'time')
+    if (trendData.length > 0 && trendData[0].date && !trendData[0].time) {
+      // Data is already daily, return as-is
+      return trendData;
+    }
+
+    // Group hourly trend data by day
     const dailyData = {};
     
     trendData.forEach(point => {
@@ -623,11 +605,11 @@ class DashboardApp {
         };
       }
       
-      dailyData[dateKey].passed_checks += point.passed_checks;
-      dailyData[dateKey].failed_checks += point.failed_checks;
-      dailyData[dateKey].total_attempts += point.total_attempts;
-      dailyData[dateKey].created_labs += point.created_labs;
-      dailyData[dateKey].resolved_labs += point.resolved_labs;
+      dailyData[dateKey].passed_checks += point.passed_checks || 0;
+      dailyData[dateKey].failed_checks += point.failed_checks || 0;
+      dailyData[dateKey].total_attempts += point.total_attempts || 0;
+      dailyData[dateKey].created_labs += point.created_labs || 0;
+      dailyData[dateKey].resolved_labs += point.resolved_labs || 0;
     });
     
     // Convert to array and sort by date

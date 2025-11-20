@@ -12,6 +12,7 @@ function createWindow() {
     minHeight: 900,
     backgroundColor: '#0D0D0D',
     titleBarStyle: 'hiddenInset',
+    fullscreen: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -20,6 +21,7 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
+  mainWindow.setFullScreen(true);
 
   // Open DevTools in development
   if (process.env.NODE_ENV === 'development') {

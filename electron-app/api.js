@@ -2,8 +2,27 @@
 class DashboardAPI {
   constructor() {
     this.webhookURL = 'https://hooks.torq.io/v1/webhooks/8f17760c-c43f-4270-b465-95dabb54389d/workflows/78f77a59-d2ee-4015-afee-3c8043bb6b31/sync';
+    this.authSecret = 'i9HpRTZLL4sq7AJW1qmpKqZsb85qB1Su9vcyvCayidk';
     // Set to true to use mock data for testing
     this.useMockData = false; // Disabled - will fetch from real webhook
+  }
+
+  prepareQuery(daysBack) {
+    // Get current timestamp
+    const now = new Date().toISOString();
+    
+    // Replace Torq template variables with actual values
+    let query = window.DashboardQueries.ENROLLMENTS_DASHBOARD_QUERY;
+    
+    // Replace template variables
+    query = query.replace(/\{\{\s*\$\.now\.result\s*\}\}/g, now);
+    query = query.replace(/\{\{\s*\$\.days_back\.result\s*\}\}/g, daysBack.toString());
+    
+    // For segments, we'll use a default priority list - you can customize this
+    const defaultSegments = JSON.stringify(["Torq employees", "Channel Partner", "Torq App User"]);
+    query = query.replace(/\{\{\s*\$\.segments\.result\s*\}\}/g, defaultSegments);
+    
+    return query;
   }
 
   async fetchDashboard(daysBack) {
@@ -14,6 +33,9 @@ class DashboardAPI {
     }
 
     try {
+      // Prepare the query with actual values
+      const preparedQuery = this.prepareQuery(daysBack);
+      
       // CRITICAL: Use text/plain to avoid CORS issues
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 300000); // 300 second (5 minute) timeout
@@ -21,9 +43,13 @@ class DashboardAPI {
       const response = await fetch(this.webhookURL, {
         method: 'POST',
         headers: {
-          'Content-Type': 'text/plain'
+          'Content-Type': 'text/plain',
+          'auth': this.authSecret
         },
-        body: JSON.stringify({ days_back: daysBack }),
+        body: JSON.stringify({ 
+          days_back: daysBack,
+          dashboard_query: preparedQuery
+        }),
         signal: controller.signal
       });
 

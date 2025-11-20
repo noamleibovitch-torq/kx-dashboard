@@ -18,14 +18,15 @@
   <div class="app-container">
     <!-- Header -->
     <div class="header">
-      <h1>KX Dashboard</h1>
+      <img src="assets/kx-logo.png" alt="Knowledge Experience Dashboard" class="header-logo">
       <div class="controls">
         <div class="days-back-control">
-          <label>Days Back:</label>
-          <div class="stepper">
-            <button id="decrementDays" aria-label="Decrease days">−</button>
-            <span class="stepper-value" id="daysBackValue">7</span>
-            <button id="incrementDays" aria-label="Increase days">+</button>
+          <label>Period:</label>
+          <div class="period-selector">
+            <button class="period-btn active" data-period="7">7d</button>
+            <button class="period-btn" data-period="30">30d</button>
+            <button class="period-btn" data-period="Q">Q</button>
+            <button class="period-btn" data-period="YTD">YTD</button>
           </div>
         </div>
         <div id="segmentFilter" class="segment-filter" style="display: none;">
@@ -68,41 +69,32 @@
         <!-- Segments Pie Chart -->
         <div class="subsection enrollments-chart-col">
           <h3 class="subsection-title">Segments</h3>
-          <div class="segments-chart-container-small">
-            <canvas id="segmentsPieChart"></canvas>
-          </div>
-          <div id="segmentsLegend" class="segments-legend-compact">
-            <!-- Legend will be inserted here -->
+          <div class="segments-horizontal">
+            <div class="segments-chart-container-small">
+              <canvas id="segmentsPieChart"></canvas>
+            </div>
+            <div id="segmentsLegend" class="segments-legend-compact">
+              <!-- Legend will be inserted here -->
+            </div>
           </div>
         </div>
 
-        <!-- Enrollment Trend -->
+        <!-- Daily Trends (Enrollments + Labs) -->
         <div class="subsection enrollments-chart-col">
-          <h3 class="subsection-title">Daily Trend</h3>
-          <div class="chart-container">
-            <canvas id="enrollmentTrendChart"></canvas>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Labs Section -->
-    <div class="section">
-      <h2 class="section-title">Labs Activity</h2>
-      <div class="labs-row">
-        <!-- Today's Metrics -->
-        <div class="subsection labs-metrics-col">
-          <h3 class="subsection-title">Today's Labs</h3>
-          <div class="labs-metrics" id="labsMetrics">
-            <!-- Lab metrics will be inserted here -->
-          </div>
-        </div>
-
-        <!-- Labs Trend Chart -->
-        <div class="subsection labs-trend-col">
-          <h3 class="subsection-title">Daily Checks Trend</h3>
-          <div class="chart-container">
-            <canvas id="trendChart"></canvas>
+          <h3 class="subsection-title">Daily Trends</h3>
+          <div class="dual-trends">
+            <div class="trend-item">
+              <div class="trend-label">Enrollments</div>
+              <div class="chart-container-small">
+                <canvas id="enrollmentTrendChart"></canvas>
+              </div>
+            </div>
+            <div class="trend-item">
+              <div class="trend-label">Labs Activity</div>
+              <div class="chart-container-small">
+                <canvas id="trendChart"></canvas>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -110,6 +102,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="queries.js"></script>
   <script src="api.js"></script>
   <script src="renderer.js"></script>
 </body>

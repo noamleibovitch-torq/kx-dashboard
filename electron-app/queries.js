@@ -1,4 +1,6 @@
--- sql/enrollments_dashboard.sql
+// Dashboard SQL Queries
+
+const ENROLLMENTS_DASHBOARD_QUERY = `-- sql/enrollments_dashboard.sql
 
 WITH raw_priority AS (
   -- {{ $.segments.result }} should be a JSON array string, e.g.:
@@ -34,7 +36,7 @@ user_segments AS (
   SELECT
     s.academy_user_id AS user_id,
     ARRAY_AGG(DISTINCT s.name IGNORE NULLS) AS segments
-  FROM `torqio.workramp.academy_user_segment` AS s
+  FROM \`torqio.workramp.academy_user_segment\` AS s
   WHERE s._fivetran_deleted = FALSE
   GROUP BY s.academy_user_id
 ),
@@ -77,7 +79,7 @@ base AS (
     r.completed_at,
     uswp.segments,
     uswp.primary_segment
-  FROM `torqio.workramp.academy_registration` AS r
+  FROM \`torqio.workramp.academy_registration\` AS r
   JOIN windows w ON TRUE
   LEFT JOIN user_segments_with_primary AS uswp
     ON r.user_id = uswp.user_id
@@ -272,18 +274,18 @@ SELECT
       STRUCT(
         (SELECT FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%SZ', current_start) FROM windows) AS start_iso,
         (SELECT FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%SZ', now_ts)         FROM windows) AS end_iso
-      ) AS `current`,
+      ) AS \`current\`,
       STRUCT(
         (SELECT FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%SZ', previous_start) FROM windows) AS start_iso,
         (SELECT FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%SZ', current_start)  FROM windows) AS end_iso
-      ) AS `previous`
-    ) AS `window`,
+      ) AS \`previous\`
+    ) AS \`window\`,
 
     -- current metrics
-    (SELECT AS STRUCT * FROM current_agg) AS `current`,
+    (SELECT AS STRUCT * FROM current_agg) AS \`current\`,
 
     -- previous metrics
-    (SELECT AS STRUCT * FROM previous_agg) AS `previous`,
+    (SELECT AS STRUCT * FROM previous_agg) AS \`previous\`,
 
     -- deltas
     STRUCT(
@@ -336,8 +338,8 @@ SELECT
 
     -- segments: current & previous distributions
     STRUCT(
-      (SELECT segments FROM segments_current_agg)  AS `current`,
-      (SELECT segments FROM segments_previous_agg) AS `previous`
+      (SELECT segments FROM segments_current_agg)  AS \`current\`,
+      (SELECT segments FROM segments_previous_agg) AS \`previous\`
     ) AS segments,
 
     -- daily trend for current period
@@ -348,4 +350,10 @@ SELECT
 
   ) AS enrollments
 FROM current_agg ca, previous_agg pa;
+`;
+
+// Export for use in renderer
+window.DashboardQueries = {
+  ENROLLMENTS_DASHBOARD_QUERY
+};
 

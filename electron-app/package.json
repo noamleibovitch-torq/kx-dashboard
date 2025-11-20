@@ -4,7 +4,7 @@
   "description": "KX Dashboard - Native macOS Electron App for Torq Analytics",
   "main": "main.js",
   "scripts": {
-    "start": "pkill -f 'Electron.*kx-dashboard' || true && electron .",
+    "start": "pkill -f 'KX Dashboard/electron-app.*Electron' || true && electron .",
     "build": "electron-builder",
     "build:mac": "electron-builder --mac",
     "build:all": "electron-builder --mac --win --linux"
@@ -50,6 +50,7 @@
       "preload.js",
       "renderer.js",
       "api.js",
+      "queries.js",
       "index.html",
       "styles.css",
       "assets/**/*"
