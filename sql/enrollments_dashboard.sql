@@ -147,7 +147,7 @@ guides_top AS (
       ORDER BY cnt DESC
       LIMIT 5
     ) AS top,
-    ca.total_enrollments
+    ANY_VALUE(ca.total_enrollments) AS total_enrollments
   FROM guides_current gc
   CROSS JOIN current_agg ca
 ),
