@@ -215,6 +215,36 @@ segments_previous_agg AS (
     ) AS segments
   FROM segments_previous sp
   CROSS JOIN previous_agg pa
+),
+
+-- daily enrollment trend for current period
+enrollments_daily AS (
+  SELECT
+    DATE(created_ts) AS enrollment_date,
+    COUNT(*) AS total_enrollments,
+    SUM(IF(is_completed AND pass_status = 'passed', 1, 0)) AS completed_passed,
+    SUM(IF(is_completed AND pass_status = 'failed', 1, 0)) AS completed_failed,
+    SUM(IF(pass_status = 'in_progress', 1, 0)) AS in_progress,
+    SUM(IF(pass_status = 'not_started', 1, 0)) AS not_started
+  FROM current_reg
+  GROUP BY enrollment_date
+  ORDER BY enrollment_date
+),
+
+enrollments_trend AS (
+  SELECT
+    ARRAY_AGG(
+      STRUCT(
+        FORMAT_TIMESTAMP('%Y-%m-%d', TIMESTAMP(enrollment_date)) AS date,
+        total_enrollments,
+        completed_passed,
+        completed_failed,
+        in_progress,
+        not_started
+      )
+      ORDER BY enrollment_date
+    ) AS trend
+  FROM enrollments_daily
 )
 
 SELECT
@@ -291,7 +321,10 @@ SELECT
     STRUCT(
       (SELECT segments FROM segments_current_agg)  AS `current`,
       (SELECT segments FROM segments_previous_agg) AS `previous`
-    ) AS segments
+    ) AS segments,
+
+    -- daily trend for current period
+    (SELECT trend FROM enrollments_trend) AS trend
 
   ) AS enrollments
 FROM current_agg ca, previous_agg pa;

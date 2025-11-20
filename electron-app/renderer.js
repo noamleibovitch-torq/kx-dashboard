@@ -233,30 +233,8 @@ class DashboardApp {
       this.enrollmentTrendChart.destroy();
     }
 
-    // Generate daily data for the period
-    const daysBack = enrollments.window.days_back;
-    const dailyData = [];
-    
-    // Create daily breakdown (estimate based on current totals)
-    const currentStart = new Date(enrollments.window.current.start_iso);
-    const currentEnd = new Date(enrollments.window.current.end_iso);
-    const daysDiff = Math.max(1, Math.ceil((currentEnd - currentStart) / (1000 * 60 * 60 * 24)));
-    
-    // Distribute enrollments across days
-    const dailyCompleted = Math.floor(enrollments.current.completed_passed / daysDiff);
-    const dailyInProgress = Math.floor(enrollments.current.in_progress / daysDiff);
-    const dailyNotStarted = Math.floor(enrollments.current.not_started / daysDiff);
-    
-    for (let i = 0; i < daysDiff; i++) {
-      const date = new Date(currentStart);
-      date.setDate(date.getDate() + i);
-      dailyData.push({
-        date: date.toISOString().split('T')[0],
-        completed_passed: dailyCompleted,
-        in_progress: dailyInProgress,
-        not_started: dailyNotStarted
-      });
-    }
+    // Use the daily trend data from the API
+    const dailyData = enrollments.trend || [];
 
     this.enrollmentTrendChart = new Chart(ctx, {
       type: 'bar',
