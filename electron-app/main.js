@@ -23,10 +23,15 @@ function createWindow() {
   mainWindow.loadFile('index.html');
   mainWindow.setFullScreen(true);
 
-  // Open DevTools in development
-  if (process.env.NODE_ENV === 'development') {
-    mainWindow.webContents.openDevTools();
-  }
+  // Always open DevTools for debugging
+  mainWindow.webContents.openDevTools();
+
+  // Add keyboard shortcut to toggle DevTools (Cmd+Option+I)
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'i' && input.meta && input.alt) {
+      mainWindow.webContents.toggleDevTools();
+    }
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;

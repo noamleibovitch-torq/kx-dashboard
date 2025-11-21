@@ -52,6 +52,49 @@ body {
   object-fit: contain;
 }
 
+/* View Switcher */
+.view-switcher {
+  display: flex;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px;
+  border-radius: 8px;
+  margin-right: auto;
+  margin-left: 20px;
+}
+
+.view-btn {
+  padding: 8px 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.view-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.view-btn.active {
+  background: #FFFFFF;
+  color: #0D0D0D;
+  font-weight: 600;
+}
+
+/* View Content */
+.view-content {
+  display: none;
+}
+
+.view-content.active {
+  display: block;
+}
+
 .controls {
   display: flex;
   align-items: center;
@@ -669,6 +712,53 @@ canvas {
 }
 
 /* Responsive */
+/* Documentation View Styles */
+.doc-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.doc-period-btn {
+  padding: 6px 16px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.doc-period-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.doc-period-btn.active {
+  background: #FFFFFF;
+  border-color: #FFFFFF;
+  color: #0D0D0D;
+}
+
+
+.doc-kpi-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--text-secondary);
+  color: var(--text-secondary);
+  font-size: 10px;
+  margin-left: 4px;
+  cursor: help;
+}
+
 @media (max-width: 1400px) {
   .content-grid {
     grid-template-columns: 1fr;

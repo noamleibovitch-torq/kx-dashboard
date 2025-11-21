@@ -25,20 +25,25 @@ class DashboardAPI {
     return query;
   }
 
-  async fetchDashboard(daysBack) {
+  async fetchDashboard(daysBack, docPeriod = 'mtd') {
     // Use mock data if enabled
     if (this.useMockData) {
       console.log('Using mock data for testing');
-      return this.getMockData(daysBack);
+      return {
+        ...this.getMockData(daysBack),
+        ...this.getMockDocumentationData()
+      };
     }
 
     try {
-      // Prepare the query with actual values
-      const preparedQuery = this.prepareQuery(daysBack);
+      // Prepare both queries
+      const academyQuery = this.prepareQuery(daysBack);
+      const { monthStart, documentationQuery } = this.prepareDocumentationQuery(docPeriod);
       
-      // CRITICAL: Use text/plain to avoid CORS issues
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 300000); // 300 second (5 minute) timeout
+      const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
+
+      console.log('Sending both academy and documentation queries...');
 
       const response = await fetch(this.webhookURL, {
         method: 'POST',
@@ -48,7 +53,9 @@ class DashboardAPI {
         },
         body: JSON.stringify({ 
           days_back: daysBack,
-          dashboard_query: preparedQuery
+          month_start: monthStart,
+          dashboard_query: academyQuery,
+          documentation_query: documentationQuery
         }),
         signal: controller.signal
       });
@@ -60,7 +67,7 @@ class DashboardAPI {
       }
 
       const data = await response.json();
-      // Response is directly the data, not wrapped in "body"
+      // Response should contain enrollments, labs, and documentation
       return data;
     } catch (error) {
       console.error('API Error:', error);
@@ -69,6 +76,54 @@ class DashboardAPI {
       }
       throw error;
     }
+  }
+
+  prepareDocumentationQuery(docPeriod = 'mtd') {
+    // Calculate month_start based on period selection
+    const now = new Date();
+    let monthStart;
+    
+    if (docPeriod === 'prev') {
+      // Previous month: first day of previous month
+      const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      monthStart = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}-01`;
+    } else {
+      // Month to date (default): first day of current month
+      monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    }
+    
+    // Get the documentation query
+    let query = window.DashboardQueries.DOCUMENTATION_DASHBOARD_QUERY;
+    
+    // Replace template variable
+    query = query.replace(/\{\{\s*\$\.month_start\.result\s*\}\}/g, monthStart);
+    
+    return { monthStart, documentationQuery: query };
+  }
+
+  getMockDocumentationData() {
+    return {
+      documentation: {
+        window: {
+          start_date: '2025-11-01',
+          end_date: '2025-12-01',
+          month: '2025-11'
+        },
+        support: {
+          active_users: 896,
+          tickets_amount: 191,
+          tickets_volume_percent: 21.32,
+          total_conversations: 794
+        },
+        ai_agent: {
+          adoption_rate_percent: 25.00,
+          deflection_rate_percent: 93.70,
+          chatbot_users: 224,
+          conversations_no_escalations: 744,
+          total_conversations_for_deflection: 794
+        }
+      }
+    };
   }
 
   getMockData(daysBack) {

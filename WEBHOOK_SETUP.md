@@ -6,42 +6,58 @@ The KX Dashboard app now sends the SQL query as a parameter in the webhook reque
 
 ## Changes Required in Torq
 
-The webhook now receives:
+The webhook now receives **BOTH** Academy and Documentation queries:
 ```json
 {
   "days_back": 7,
-  "dashboard_query": "WITH raw_priority AS (SELECT JSON_QUERY_ARRAY('[\"Torq App User\",\"Channel Partner\",\"Torq employees\"]') AS arr) ..."
+  "month_start": "2025-11-01",
+  "dashboard_query": "WITH raw_priority AS (SELECT ...) ... AS enrollments",
+  "documentation_query": "WITH params AS (SELECT ...) ... AS documentation"
 }
 ```
 
-**Important:** The `dashboard_query` is pre-processed and contains actual values (timestamps, days_back, segment priorities) - NOT Torq template variables. It's ready to execute directly in BigQuery.
+**Important:** 
+- Both `dashboard_query` and `documentation_query` are pre-processed with actual values
+- `dashboard_query` returns Academy metrics (enrollments, labs)
+- `documentation_query` returns Documentation metrics (support, AI agent)
+- Both are ready to execute directly in BigQuery
 
 ### Update Your Torq Workflow
 
-1. **Accept the `dashboard_query` parameter** in your webhook trigger
-2. **Execute it directly in BigQuery** - no template substitution needed
-3. **Return the results as JSON**
+1. **Accept both query parameters** in your webhook trigger
+2. **Execute both queries in BigQuery** (two separate BigQuery steps)
+3. **Merge the results** and return as JSON
 
 ### Example Torq Workflow Structure
 
 ```
 Webhook Trigger
-  ↓ (receives days_back and dashboard_query)
+  ↓ (receives days_back, month_start, dashboard_query, documentation_query)
   ↓
-BigQuery Step - Execute Query
+BigQuery Step 1: Academy Data
   ↓ (query: {{ $.trigger.dashboard_query }})
-  ↓ (the query is ready to run - contains actual values)
+  ↓ (returns enrollments and labs)
+  ↓
+BigQuery Step 2: Documentation Data
+  ↓ (query: {{ $.trigger.documentation_query }})
+  ↓ (returns documentation metrics)
+  ↓
+Merge Results (JQ or JSON Transform)
+  ↓ (combine both outputs)
   ↓
 Return Results
-  ↓ (return the query results as-is)
+  ↓ { enrollments: {...}, labs: {...}, documentation: {...} }
 ```
 
 ### BigQuery Step Configuration
 
-In your BigQuery integration step:
+**Step 1 - Academy Data:**
 - **Query**: `{{ $.trigger.dashboard_query }}`
-- **No parameters needed** - the app already substituted all values
-- **Just execute and return** the results
+- Returns: `enrollments` and `labs` data
+
+**Step 2 - Documentation Data:**
+- **Query**: `{{ $.trigger.documentation_query }}`  
+- Returns: `documentation` data with `support` and `ai_agent` metrics
 
 ### What the App Does
 

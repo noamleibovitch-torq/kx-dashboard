@@ -3,8 +3,11 @@ class DashboardApp {
   constructor() {
     this.api = new DashboardAPI();
     this.data = null;
+    this.documentationData = null;
+    this.currentView = this.loadView();
     this.selectedPeriod = this.loadPeriod();
     this.daysBack = this.calculateDaysBack(this.selectedPeriod);
+    this.docPeriod = this.loadDocPeriod(); // 'mtd' or 'prev'
     this.refreshTimer = null;
     this.trendChart = null;
     this.segmentsPieChart = null;
@@ -37,11 +40,22 @@ class DashboardApp {
   init() {
     this.setupEventListeners();
     this.updatePeriodDisplay();
+    this.updateDocPeriodDisplay();
+    this.updateViewDisplay();
     this.load();
     this.startAutoRefresh();
   }
 
   // Persistence
+  loadView() {
+    const saved = localStorage.getItem('currentView');
+    return saved || 'academy';
+  }
+
+  saveView() {
+    localStorage.setItem('currentView', this.currentView);
+  }
+
   loadPeriod() {
     const saved = localStorage.getItem('selectedPeriod');
     return saved || '7';
@@ -49,6 +63,15 @@ class DashboardApp {
 
   savePeriod() {
     localStorage.setItem('selectedPeriod', this.selectedPeriod);
+  }
+
+  loadDocPeriod() {
+    const saved = localStorage.getItem('docPeriod');
+    return saved || 'mtd'; // Default to Month to Date
+  }
+
+  saveDocPeriod() {
+    localStorage.setItem('docPeriod', this.docPeriod);
   }
 
   calculateDaysBack(period) {
@@ -71,7 +94,22 @@ class DashboardApp {
 
   // Event Listeners
   setupEventListeners() {
-    // Period selector buttons
+    // View switcher buttons
+    document.querySelectorAll('.view-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.view;
+        console.log('View changed to:', view);
+        
+        this.currentView = view;
+        this.saveView();
+        this.updateViewDisplay();
+        
+        // Just render the view, data is already loaded
+        this.render();
+      });
+    });
+
+    // Period selector buttons (Academy)
     document.querySelectorAll('.period-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const period = btn.dataset.period;
@@ -86,6 +124,22 @@ class DashboardApp {
         
         // Refresh data from webhook
         console.log('Triggering data refresh...');
+        this.load();
+      });
+    });
+
+    // Documentation period selector buttons
+    document.querySelectorAll('.doc-period-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const docPeriod = btn.dataset.docPeriod;
+        console.log('Documentation period changed to:', docPeriod);
+        
+        this.docPeriod = docPeriod;
+        this.saveDocPeriod();
+        this.updateDocPeriodDisplay();
+        
+        // Refresh data from webhook
+        console.log('Triggering documentation data refresh...');
         this.load();
       });
     });
@@ -106,6 +160,40 @@ class DashboardApp {
     });
   }
 
+  updateDocPeriodDisplay() {
+    // Update active documentation period button
+    document.querySelectorAll('.doc-period-btn').forEach(btn => {
+      if (btn.dataset.docPeriod === this.docPeriod) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  }
+
+  updateViewDisplay() {
+    // Update active view button
+    document.querySelectorAll('.view-btn').forEach(btn => {
+      if (btn.dataset.view === this.currentView) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    // Show/hide view content
+    document.getElementById('academyView').classList.toggle('active', this.currentView === 'academy');
+    document.getElementById('documentationView').classList.toggle('active', this.currentView === 'documentation');
+
+    // Show/hide segment filter (only for academy view)
+    const segmentFilter = document.getElementById('segmentFilter');
+    if (this.currentView === 'academy' && this.selectedSegment) {
+      segmentFilter.style.display = 'flex';
+    } else {
+      segmentFilter.style.display = 'none';
+    }
+  }
+
   // Data Loading
   async load() {
     try {
@@ -113,11 +201,16 @@ class DashboardApp {
       this.showLoading(true);
       this.hideError();
 
-      console.log('Fetching dashboard data for', this.daysBack, 'days...');
-      const result = await this.api.fetchDashboard(this.daysBack);
-      console.log('Data received:', result);
+      console.log('Fetching all dashboard data for', this.daysBack, 'days and doc period:', this.docPeriod);
       
-      this.data = result;
+      // Single API call that returns both academy and documentation data
+      const result = await this.api.fetchDashboard(this.daysBack, this.docPeriod);
+      console.log('Dashboard data received:', result);
+      
+      // Split the combined response
+      this.data = result; // Contains enrollments and labs
+      this.documentationData = result; // Contains documentation
+      
       this.render();
       this.updateLastUpdated();
     } catch (error) {
@@ -243,14 +336,18 @@ class DashboardApp {
 
   // Rendering
   render() {
-    if (!this.data) return;
+    if (this.currentView === 'academy') {
+      if (!this.data) return;
 
-    const displayData = this.getFilteredData();
+      const displayData = this.getFilteredData();
 
-    this.renderKPIs(displayData);
-    this.renderEnrollments(displayData);
-    this.renderSegments(); // Always show unfiltered segments
-    this.renderLabs();
+      this.renderKPIs(displayData);
+      this.renderEnrollments(displayData);
+      this.renderSegments(); // Always show unfiltered segments
+      this.renderLabs();
+    } else if (this.currentView === 'documentation') {
+      this.renderDocumentation();
+    }
   }
 
   renderKPIs(displayData = this.data) {
@@ -577,6 +674,147 @@ class DashboardApp {
 
     // Trend chart only - metrics are now in KPI tiles
     this.renderTrendChart(labs.trend);
+  }
+
+  renderDocumentation() {
+    if (!this.documentationData || !this.documentationData.documentation) {
+      console.log('No documentation data available');
+      return;
+    }
+    
+    const doc = this.documentationData.documentation;
+    
+    // Helper function to safely format numbers
+    const formatNumber = (value, decimals = 0) => {
+      
+      if (value === null || value === undefined) {
+        return 'N/A';
+      }
+      
+      // Handle string division like "1597/100"
+      if (typeof value === 'string' && value.includes('/')) {
+        const parts = value.split('/');
+        if (parts.length === 2) {
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator !== 0) {
+            return (numerator / denominator).toFixed(decimals);
+          }
+        }
+      }
+      
+      // Try to parse string numbers
+      if (typeof value === 'string') {
+        const parsed = parseFloat(value);
+        if (!isNaN(parsed)) {
+          return parsed.toFixed(decimals);
+        }
+        return 'N/A';
+      }
+      
+      // Handle numeric values
+      if (typeof value === 'number' && !isNaN(value)) {
+        return value.toFixed(decimals);
+      }
+      
+      return 'N/A';
+    };
+    
+    // Helper to render delta (matching Academy style)
+    const renderDelta = (delta, previousValue, decimals = 0, suffix = '', inverse = false) => {
+      if (!delta || delta.absolute === undefined || delta.absolute === null) return '';
+      
+      // Parse the absolute value if it's a string
+      let absoluteValue = delta.absolute;
+      
+      // Handle string division like "-43/100"
+      if (typeof absoluteValue === 'string' && absoluteValue.includes('/')) {
+        const parts = absoluteValue.split('/');
+        if (parts.length === 2) {
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator !== 0) {
+            absoluteValue = numerator / denominator;
+          } else {
+            return '';
+          }
+        }
+      } else if (typeof absoluteValue === 'string') {
+        absoluteValue = parseFloat(absoluteValue);
+      }
+      
+      if (isNaN(absoluteValue)) return '';
+      
+      const isPositive = absoluteValue >= 0;
+      const arrow = isPositive ? '↑' : '↓';
+      const sign = isPositive ? '+' : '';
+      
+      // For inverse metrics (like tickets), lower is better so flip the color
+      const colorClass = inverse 
+        ? (isPositive ? 'negative' : 'positive')
+        : (isPositive ? 'positive' : 'negative');
+      
+      // Format percent change
+      let percentChange = '';
+      if (delta.percent !== undefined && delta.percent !== null) {
+        const percentValue = formatNumber(delta.percent, 1);
+        percentChange = ` (${sign}${percentValue}%)`;
+      }
+      
+      return `
+        <div class="kpi-delta ${colorClass}">
+          <span class="previous-value">Previous: ${formatNumber(previousValue, decimals)}${suffix}</span>
+          ${arrow} ${sign}${Math.abs(absoluteValue).toFixed(decimals)}${suffix}${percentChange}
+        </div>
+      `;
+    };
+
+    // Render all 6 metrics in one row
+    const allMetricsHTML = `
+      <div class="kpi-card">
+        <div class="kpi-label">Active users within timeframe</div>
+        <div class="kpi-sublabel">${doc.window?.month || 'Current Month'}</div>
+        <div class="kpi-value">${formatNumber(doc.support?.active_users)}</div>
+        ${renderDelta(doc.support_delta?.active_users, doc.support_previous?.active_users, 0, '', false)}
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Tickets Amount</div>
+        <div class="kpi-sublabel">${doc.window?.month || 'Current Month'}</div>
+        <div class="kpi-value">${formatNumber(doc.support?.tickets_amount)}</div>
+        ${renderDelta(doc.support_delta?.tickets_amount, doc.support_previous?.tickets_amount, 0, '', true)}
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Tickets Volume</div>
+        <div class="kpi-sublabel">${doc.window?.month || 'Current Month'}</div>
+        <div class="kpi-value">${formatNumber(doc.support?.tickets_volume_percent, 2)}<span class="suffix">%</span></div>
+        ${renderDelta(doc.support_delta?.tickets_volume_percent, doc.support_previous?.tickets_volume_percent, 2, '%', true)}
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Total Intercom Conversations</div>
+        <div class="kpi-sublabel">${doc.window?.month || 'Current Month'}</div>
+        <div class="kpi-value">${formatNumber(doc.support?.total_conversations)}</div>
+        ${renderDelta(doc.support_delta?.total_conversations, doc.support_previous?.total_conversations, 0, '', false)}
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">
+          Adoption rate
+          <span class="doc-kpi-info" title="Percentage of active users who interacted with chatbot">ⓘ</span>
+        </div>
+        <div class="kpi-sublabel">${doc.window?.month || 'Current Month'}</div>
+        <div class="kpi-value">${formatNumber(doc.ai_agent?.adoption_rate_percent, 2)}<span class="suffix">%</span></div>
+        ${renderDelta(doc.ai_agent_delta?.adoption_rate_percent, doc.ai_agent_previous?.adoption_rate_percent, 2, '%', false)}
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">
+          Deflection rate
+          <span class="doc-kpi-info" title="Percentage of conversations resolved without human escalation">ⓘ</span>
+        </div>
+        <div class="kpi-sublabel">${doc.window?.month || 'Current Month'}</div>
+        <div class="kpi-value">${formatNumber(doc.ai_agent?.deflection_rate_percent, 2)}<span class="suffix">%</span></div>
+        ${renderDelta(doc.ai_agent_delta?.deflection_rate_percent, doc.ai_agent_previous?.deflection_rate_percent, 2, '%', false)}
+      </div>
+    `;
+    document.getElementById('docMetricsGrid').innerHTML = allMetricsHTML;
   }
 
   aggregateTrendByDay(trendData) {

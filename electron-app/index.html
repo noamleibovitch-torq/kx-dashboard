@@ -19,6 +19,13 @@
     <!-- Header -->
     <div class="header">
       <img src="assets/kx-logo.png" alt="Knowledge Experience Dashboard" class="header-logo">
+      
+      <!-- View Switcher -->
+      <div class="view-switcher">
+        <button class="view-btn active" data-view="academy">Academy</button>
+        <button class="view-btn" data-view="documentation">Documentation</button>
+      </div>
+
       <div class="controls">
         <div class="days-back-control">
           <label>Period:</label>
@@ -46,16 +53,18 @@
       <span id="errorMessage"></span>
     </div>
 
-    <!-- KPI Summary -->
-    <div class="section">
-      <h2 class="section-title">Key Metrics</h2>
-      <div class="kpi-grid" id="kpiGrid">
-        <!-- KPI cards will be inserted here -->
+    <!-- Academy View -->
+    <div id="academyView" class="view-content active">
+      <!-- KPI Summary -->
+      <div class="section">
+        <h2 class="section-title">Key Metrics</h2>
+        <div class="kpi-grid" id="kpiGrid">
+          <!-- KPI cards will be inserted here -->
+        </div>
       </div>
-    </div>
 
-    <!-- Enrollments Section -->
-    <div class="section">
+      <!-- Enrollments Section -->
+      <div class="section">
       <h2 class="section-title">Enrollments</h2>
       <div class="enrollments-row">
         <!-- Top Guides -->
@@ -99,6 +108,30 @@
         </div>
       </div>
     </div>
+    </div>
+    <!-- End Academy View -->
+
+    <!-- Documentation View -->
+    <div id="documentationView" class="view-content">
+      <!-- Period Selection -->
+      <div class="controls">
+        <div class="days-back-control">
+          <label>Period:</label>
+          <div class="period-selector">
+            <button class="doc-period-btn active" data-doc-period="mtd">Month to Date</button>
+            <button class="doc-period-btn" data-doc-period="prev">Previous Month</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- All Documentation Metrics in One Row -->
+      <div class="section">
+        <div class="doc-metrics-grid" id="docMetricsGrid">
+          <!-- All 6 KPI cards will be inserted here in one row -->
+        </div>
+      </div>
+    </div>
+    <!-- End Documentation View -->
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
