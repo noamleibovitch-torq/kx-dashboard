@@ -579,9 +579,139 @@ deflection_data_prev AS (
     fact_active_users.month_start >= params.prev_month_start
     AND fact_active_users.month_start < params.prev_month_end
     AND agg_deflection_rate.deflection_rate_month IS NOT NULL
+),
+
+-- Total numbers trend: absolute counts (12 months)
+trend_data AS (
+  SELECT
+    FORMAT_DATE('%Y-%m', fact_active_users.month_start) AS month,
+    COUNT(DISTINCT fact_active_users.profile_id_config) AS total_active_users,
+    ROUND(COALESCE(CAST(
+      (SUM(DISTINCT 
+        (CAST(ROUND(COALESCE(agg_monthly_zendesk_tickets.total_tickets, 0) * (1/1000*1.0), 9) AS NUMERIC) + 
+        (CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_monthly_zendesk_tickets.month_start AS STRING))), 1, 15)) AS INT64) AS NUMERIC) * 4294967296 + 
+        CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_monthly_zendesk_tickets.month_start AS STRING))), 16, 8)) AS INT64) AS NUMERIC)) * 0.000000001)
+      ) - 
+      SUM(DISTINCT 
+        (CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_monthly_zendesk_tickets.month_start AS STRING))), 1, 15)) AS INT64) AS NUMERIC) * 4294967296 + 
+        CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_monthly_zendesk_tickets.month_start AS STRING))), 16, 8)) AS INT64) AS NUMERIC)) * 0.000000001)
+      ) / (1/1000*1.0) AS NUMERIC), 0), 0) AS total_tickets_amount,
+    ROUND(COALESCE(CAST(
+      (SUM(DISTINCT 
+        (CAST(ROUND(COALESCE(agg_deflection_rate.deflection_rate_total_distinct_conversations, 0) * (1/1000*1.0), 9) AS NUMERIC) + 
+        (CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 1, 15)) AS INT64) AS NUMERIC) * 4294967296 + 
+        CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 16, 8)) AS INT64) AS NUMERIC)) * 0.000000001)
+      ) - 
+      SUM(DISTINCT 
+        (CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 1, 15)) AS INT64) AS NUMERIC) * 4294967296 + 
+        CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 16, 8)) AS INT64) AS NUMERIC)) * 0.000000001)
+      ) / (1/1000*1.0) AS NUMERIC), 0), 0) AS total_conversations
+  FROM \`stackpulse-production.bi.fact_active_users\` AS fact_active_users
+  LEFT JOIN \`stackpulse-production.kx_dataset.fact_intercom_chatbot\` AS fact_intercom_chatbot 
+    ON fact_intercom_chatbot.profile_id = fact_active_users.profile_id_config 
+    AND fact_intercom_chatbot.calc_month = FORMAT_DATE('%Y-%m-%d', fact_active_users.month_start)
+  LEFT JOIN \`stackpulse-production.kx_dataset.agg_deflection_rate\` AS agg_deflection_rate 
+    ON agg_deflection_rate.deflection_rate_month = FORMAT_DATE('%Y-%m-%d', fact_active_users.month_start)
+  LEFT JOIN \`stackpulse-production.kx_dataset.agg_monthly_zendesk_tickets\` AS agg_monthly_zendesk_tickets 
+    ON agg_monthly_zendesk_tickets.month_start = FORMAT_DATE('%Y-%m-%d', fact_active_users.month_start)
+  WHERE 
+    (fact_active_users.is_torq) = 0 
+    AND ((fact_active_users.month_start) >= ((DATE_ADD(DATE_TRUNC(CURRENT_DATE('UTC'), MONTH), INTERVAL -12 MONTH))) 
+    AND (fact_active_users.month_start) < ((DATE_ADD(DATE_ADD(DATE_TRUNC(CURRENT_DATE('UTC'), MONTH), INTERVAL -12 MONTH), INTERVAL 13 MONTH))))
+  GROUP BY 1
+  ORDER BY 1 ASC
+),
+
+-- Engagement trend: percentages (adoption, deflection, tickets volume) - 12 months
+engagement_trend_data AS (
+  SELECT
+    FORMAT_DATE('%Y-%m', fact_active_users.month_start) AS month,
+    -- Adoption Rate: (chatbot users / total active users) * 100
+    ROUND(
+      CASE 
+        WHEN COUNT(DISTINCT fact_active_users.profile_id_config) > 0 
+        THEN (COUNT(DISTINCT fact_intercom_chatbot.profile_id) * 100.0 / COUNT(DISTINCT fact_active_users.profile_id_config))
+        ELSE 0 
+      END, 2
+    ) AS adoption_rate_percent,
+    -- Deflection Rate: (conversations without escalations / total conversations) * 100
+    CAST(
+      ROUND(
+        CASE 
+          WHEN ROUND(COALESCE(CAST(
+            (SUM(DISTINCT 
+              (CAST(ROUND(COALESCE(agg_deflection_rate.deflection_rate_total_distinct_conversations, 0) * (1/1000*1.0), 9) AS NUMERIC) + 
+              (CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 1, 15)) AS INT64) AS NUMERIC) * 4294967296 + 
+              CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 16, 8)) AS INT64) AS NUMERIC)) * 0.000000001)
+            ) - 
+            SUM(DISTINCT 
+              (CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 1, 15)) AS INT64) AS NUMERIC) * 4294967296 + 
+              CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 16, 8)) AS INT64) AS NUMERIC)) * 0.000000001)
+            ) / (1/1000*1.0) AS NUMERIC), 0), 0) > 0
+          THEN (
+            ROUND(COALESCE(CAST(
+              (SUM(DISTINCT 
+                (CAST(ROUND(COALESCE(agg_deflection_rate.deflection_rate_conversations_no_tickets, 0) * (1/1000*1.0), 9) AS NUMERIC) + 
+                (CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 1, 15)) AS INT64) AS NUMERIC) * 4294967296 + 
+                CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 16, 8)) AS INT64) AS NUMERIC)) * 0.000000001)
+              ) - 
+              SUM(DISTINCT 
+                (CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 1, 15)) AS INT64) AS NUMERIC) * 4294967296 + 
+                CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 16, 8)) AS INT64) AS NUMERIC)) * 0.000000001)
+              ) / (1/1000*1.0) AS NUMERIC), 0), 0) * 100.0 / 
+            ROUND(COALESCE(CAST(
+              (SUM(DISTINCT 
+                (CAST(ROUND(COALESCE(agg_deflection_rate.deflection_rate_total_distinct_conversations, 0) * (1/1000*1.0), 9) AS NUMERIC) + 
+                (CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 1, 15)) AS INT64) AS NUMERIC) * 4294967296 + 
+                CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 16, 8)) AS INT64) AS NUMERIC)) * 0.000000001)
+              ) - 
+              SUM(DISTINCT 
+                (CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 1, 15)) AS INT64) AS NUMERIC) * 4294967296 + 
+                CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 16, 8)) AS INT64) AS NUMERIC)) * 0.000000001)
+              ) / (1/1000*1.0) AS NUMERIC), 0), 0)
+          )
+          ELSE 0 
+        END, 2
+      ) AS FLOAT64
+    ) AS deflection_rate_percent,
+    -- Tickets Volume: (tickets / active users) * 100
+    CAST(
+      ROUND(
+        CASE 
+          WHEN COUNT(DISTINCT fact_active_users.profile_id_config) > 0 
+          THEN (
+            ROUND(COALESCE(CAST(
+              (SUM(DISTINCT 
+                (CAST(ROUND(COALESCE(agg_monthly_zendesk_tickets.total_tickets, 0) * (1/1000*1.0), 9) AS NUMERIC) + 
+                (CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_monthly_zendesk_tickets.month_start AS STRING))), 1, 15)) AS INT64) AS NUMERIC) * 4294967296 + 
+                CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_monthly_zendesk_tickets.month_start AS STRING))), 16, 8)) AS INT64) AS NUMERIC)) * 0.000000001)
+              ) - 
+              SUM(DISTINCT 
+                (CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_monthly_zendesk_tickets.month_start AS STRING))), 1, 15)) AS INT64) AS NUMERIC) * 4294967296 + 
+                CAST(CAST(CONCAT('0x', SUBSTR(TO_HEX(MD5(CAST(agg_monthly_zendesk_tickets.month_start AS STRING))), 16, 8)) AS INT64) AS NUMERIC)) * 0.000000001)
+              ) / (1/1000*1.0) AS NUMERIC), 0), 0) * 100.0 / COUNT(DISTINCT fact_active_users.profile_id_config)
+          )
+          ELSE 0 
+        END, 2
+      ) AS FLOAT64
+    ) AS tickets_volume_percent
+  FROM \`stackpulse-production.bi.fact_active_users\` AS fact_active_users
+  LEFT JOIN \`stackpulse-production.kx_dataset.fact_intercom_chatbot\` AS fact_intercom_chatbot 
+    ON fact_intercom_chatbot.profile_id = fact_active_users.profile_id_config 
+    AND fact_intercom_chatbot.calc_month = FORMAT_DATE('%Y-%m-%d', fact_active_users.month_start)
+  LEFT JOIN \`stackpulse-production.kx_dataset.agg_deflection_rate\` AS agg_deflection_rate 
+    ON agg_deflection_rate.deflection_rate_month = FORMAT_DATE('%Y-%m-%d', fact_active_users.month_start)
+  LEFT JOIN \`stackpulse-production.kx_dataset.agg_monthly_zendesk_tickets\` AS agg_monthly_zendesk_tickets 
+    ON agg_monthly_zendesk_tickets.month_start = FORMAT_DATE('%Y-%m-%d', fact_active_users.month_start)
+  WHERE 
+    (fact_active_users.is_torq) = 0 
+    AND ((fact_active_users.month_start) >= ((DATE_ADD(DATE_TRUNC(CURRENT_DATE('UTC'), MONTH), INTERVAL -12 MONTH))) 
+    AND (fact_active_users.month_start) < ((DATE_ADD(DATE_ADD(DATE_TRUNC(CURRENT_DATE('UTC'), MONTH), INTERVAL -12 MONTH), INTERVAL 13 MONTH))))
+  GROUP BY 1
+  ORDER BY 1 ASC
 )
 
--- Final structured output with current, previous, and delta
+-- Final structured output with current, previous, delta, and trends
 SELECT
   STRUCT(
     STRUCT(
@@ -721,13 +851,60 @@ SELECT
           ELSE 0 
         END, 1) AS percent
       ) AS deflection_rate_percent
-    ) AS ai_agent_delta
+    ) AS ai_agent_delta,
+    
+    -- 12-month total numbers trend
+    ARRAY(
+      SELECT AS STRUCT
+        month,
+        total_active_users,
+        total_tickets_amount,
+        total_conversations
+      FROM trend_data
+    ) AS trend,
+    
+    -- 12-month engagement trend (percentages)
+    ARRAY(
+      SELECT AS STRUCT
+        month,
+        adoption_rate_percent,
+        deflection_rate_percent,
+        tickets_volume_percent
+      FROM engagement_trend_data
+    ) AS engagement_trend
   ) AS documentation;
 `;
 
+// NOTE: This query is no longer sent separately - trend data is now included in DOCUMENTATION_DASHBOARD_QUERY
+// Kept for reference only
+const DOCUMENTATION_TREND_QUERY = `-- Documentation Trend Query (Last 12 months) - DEPRECATED
+SELECT
+    (FORMAT_DATE('%Y-%m', fact_active_users.month_start)) AS month,
+    COUNT(DISTINCT fact_active_users.profile_id_config) AS active_users,
+    ROUND(COALESCE(CAST((SUM(DISTINCT (CAST(ROUND(COALESCE(agg_monthly_zendesk_tickets.total_tickets, 0)*(1/1000*1.0), 9) AS NUMERIC) + (cast(cast(concat('0x', substr(to_hex(md5(CAST(agg_monthly_zendesk_tickets.month_start AS STRING))), 1, 15)) as int64) as numeric) * 4294967296 + cast(cast(concat('0x', substr(to_hex(md5(CAST(agg_monthly_zendesk_tickets.month_start AS STRING))), 16, 8)) as int64) as numeric)) * 0.000000001)) - SUM(DISTINCT (cast(cast(concat('0x', substr(to_hex(md5(CAST(agg_monthly_zendesk_tickets.month_start AS STRING))), 1, 15)) as int64) as numeric) * 4294967296 + cast(cast(concat('0x', substr(to_hex(md5(CAST(agg_monthly_zendesk_tickets.month_start AS STRING))), 16, 8)) as int64) as numeric)) * 0.000000001)) / (1/1000*1.0) AS NUMERIC), 0), 6) AS tickets_amount,
+    COUNT(DISTINCT fact_intercom_chatbot.conversation_id) AS chatbot_conversations,
+    ROUND(COALESCE(CAST((SUM(DISTINCT (CAST(ROUND(COALESCE(agg_deflection_rate.deflection_rate_total_distinct_conversations, 0)*(1/1000*1.0), 9) AS NUMERIC) + (cast(cast(concat('0x', substr(to_hex(md5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 1, 15)) as int64) as numeric) * 4294967296 + cast(cast(concat('0x', substr(to_hex(md5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 16, 8)) as int64) as numeric)) * 0.000000001)) - SUM(DISTINCT (cast(cast(concat('0x', substr(to_hex(md5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 1, 15)) as int64) as numeric) * 4294967296 + cast(cast(concat('0x', substr(to_hex(md5(CAST(agg_deflection_rate.deflection_rate_month AS STRING))), 16, 8)) as int64) as numeric)) * 0.000000001)) / (1/1000*1.0) AS NUMERIC), 0), 6) AS total_conversations
+FROM \`stackpulse-production.bi.fact_active_users\` AS fact_active_users
+LEFT JOIN \`stackpulse-production.kx_dataset.fact_intercom_chatbot\` AS fact_intercom_chatbot 
+    ON fact_intercom_chatbot.profile_id = fact_active_users.profile_id_config 
+    AND fact_intercom_chatbot.calc_month = (FORMAT_DATE('%Y-%m-%d', fact_active_users.month_start))
+LEFT JOIN \`stackpulse-production.kx_dataset.agg_deflection_rate\` AS agg_deflection_rate 
+    ON agg_deflection_rate.deflection_rate_month = (FORMAT_DATE('%Y-%m-%d', fact_active_users.month_start))
+LEFT JOIN \`stackpulse-production.kx_dataset.agg_monthly_zendesk_tickets\` AS agg_monthly_zendesk_tickets 
+    ON agg_monthly_zendesk_tickets.month_start = (FORMAT_DATE('%Y-%m-%d', fact_active_users.month_start))
+WHERE (fact_active_users.is_torq) = 0 
+    AND ((fact_active_users.month_start) >= ((DATE_ADD(DATE_TRUNC(CURRENT_DATE('UTC'), MONTH), INTERVAL -12 MONTH))) 
+    AND (fact_active_users.month_start) < ((DATE_ADD(DATE_ADD(DATE_TRUNC(CURRENT_DATE('UTC'), MONTH), INTERVAL -12 MONTH), INTERVAL 13 MONTH))))
+GROUP BY 1
+ORDER BY 1 ASC
+LIMIT 500;
+`;
+
 // Export for use in renderer
+// Export queries for use in API and renderer
 window.DashboardQueries = {
   ENROLLMENTS_DASHBOARD_QUERY,
-  DOCUMENTATION_DASHBOARD_QUERY
+  DOCUMENTATION_DASHBOARD_QUERY,
+  DOCUMENTATION_TREND_QUERY  // Kept for reference, not sent to webhook (trend now in DOCUMENTATION_DASHBOARD_QUERY)
 };
 

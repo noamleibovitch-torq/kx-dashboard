@@ -101,10 +101,6 @@ body {
   gap: 20px;
 }
 
-.view-content .controls {
-  margin-bottom: 16px;
-}
-
 .days-back-control {
   display: flex;
   align-items: center;
@@ -155,6 +151,25 @@ body {
   color: var(--text-secondary);
   padding-left: 12px;
   border-left: 1px solid var(--border-color);
+}
+
+.cache-info {
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.cache-info:hover {
+  background: rgba(0, 217, 255, 0.15);
+  color: var(--accent-cyan);
+  transform: translateY(-1px);
+}
+
+.cache-info:active {
+  transform: translateY(0);
+  background: rgba(0, 217, 255, 0.25);
 }
 
 /* Segment Filter */
@@ -293,6 +308,10 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 10px 12px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 120px;
+  gap: 4px;
 }
 
 .kpi-label {
@@ -301,7 +320,9 @@ body {
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 1.2px;
-  margin-bottom: 4px;
+  min-height: 32px;
+  display: flex;
+  align-items: flex-start;
 }
 
 .kpi-sublabel {
@@ -315,7 +336,9 @@ body {
   font-size: 28px;
   font-weight: bold;
   color: var(--text-primary);
-  margin-bottom: 4px;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
 }
 
 .kpi-value .suffix {
@@ -328,10 +351,10 @@ body {
 .kpi-delta {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   padding: 4px 8px;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -346,9 +369,13 @@ body {
 }
 
 .kpi-delta .previous-value {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  opacity: 0.8;
+  opacity: 0.6;
+}
+
+.kpi-delta span {
+  white-space: nowrap;
 }
 
 /* Enrollments Row */
@@ -628,6 +655,11 @@ body {
   position: relative;
   height: 180px;
   padding: 8px;
+}
+
+/* Documentation view chart containers - taller */
+#documentationView .chart-container {
+  height: 280px;
 }
 
 .chart-container-small {

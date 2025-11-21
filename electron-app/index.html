@@ -26,21 +26,8 @@
         <button class="view-btn" data-view="documentation">Documentation</button>
       </div>
 
-      <div class="last-updated" id="lastUpdated">
-        Loading...
-      </div>
-    </div>
-
-    <!-- Error Banner -->
-    <div class="error-banner" id="errorBanner">
-      <span class="icon">⚠️</span>
-      <span id="errorMessage"></span>
-    </div>
-
-    <!-- Academy View -->
-    <div id="academyView" class="view-content active">
-      <!-- Academy Period Selection -->
-      <div class="controls">
+      <!-- Academy Period Controls -->
+      <div id="academyControls" class="controls">
         <div class="days-back-control">
           <label>Period:</label>
           <div class="period-selector">
@@ -57,6 +44,30 @@
         </div>
       </div>
 
+      <!-- Documentation Period Controls -->
+      <div id="docControls" class="controls" style="display: none;">
+        <div class="days-back-control">
+          <label>Period:</label>
+          <div class="period-selector">
+            <button class="doc-period-btn active" data-doc-period="mtd">Month to Date</button>
+            <button class="doc-period-btn" data-doc-period="prev">Previous Month</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="last-updated" id="lastUpdated">
+        Loading...
+      </div>
+    </div>
+
+    <!-- Error Banner -->
+    <div class="error-banner" id="errorBanner">
+      <span class="icon">⚠️</span>
+      <span id="errorMessage"></span>
+    </div>
+
+    <!-- Academy View -->
+    <div id="academyView" class="view-content active">
       <!-- KPI Summary -->
       <div class="section">
         <h2 class="section-title">Key Metrics</h2>
@@ -115,21 +126,26 @@
 
     <!-- Documentation View -->
     <div id="documentationView" class="view-content">
-      <!-- Period Selection -->
-      <div class="controls">
-        <div class="days-back-control">
-          <label>Period:</label>
-          <div class="period-selector">
-            <button class="doc-period-btn active" data-doc-period="mtd">Month to Date</button>
-            <button class="doc-period-btn" data-doc-period="prev">Previous Month</button>
-          </div>
+      <!-- All Documentation Metrics in One Row -->
+      <div class="section">
+        <h2 class="section-title" id="docPeriodTitle">Documentation Metrics</h2>
+        <div class="doc-metrics-grid" id="docMetricsGrid">
+          <!-- All 6 KPI cards will be inserted here in one row -->
         </div>
       </div>
 
-      <!-- All Documentation Metrics in One Row -->
+      <!-- Documentation Trends -->
       <div class="section">
-        <div class="doc-metrics-grid" id="docMetricsGrid">
-          <!-- All 6 KPI cards will be inserted here in one row -->
+        <h2 class="section-title">Total Numbers Trend (12 Months)</h2>
+        <div class="chart-container">
+          <canvas id="docTrendChart"></canvas>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">Rates Trend (12 Months)</h2>
+        <div class="chart-container">
+          <canvas id="docEngagementChart"></canvas>
         </div>
       </div>
     </div>

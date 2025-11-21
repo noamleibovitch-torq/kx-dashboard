@@ -32,15 +32,22 @@ this.enableCache = true; // Set to false to disable caching
 ```
 
 #### Force Refresh (Clear Cache)
-Press **`Cmd+Shift+R`** (Mac) or **`Ctrl+Shift+R`** (Windows) to:
-1. Clear all cached data
-2. Fetch fresh data from webhook
+
+**Option 1: Click Cache Icon**
+- Click on the cache stats in footer: `💾 3 cached (216KB)`
+- Tooltip appears: "Click to force refresh from webhook"
+- Instantly clears cache and fetches fresh data
+
+**Option 2: Keyboard Shortcut**
+- Press **`Cmd+Shift+R`** (Mac) or **`Ctrl+Shift+R`** (Windows)
+- Same effect: clears cache and reloads from webhook
 
 #### Console Indicators
 - `✅ Using cached data (age: X seconds)` - Data loaded from cache
 - `🌐 Fetching fresh data from webhook...` - Making API call
 - `💾 Data cached for future use` - Response saved to cache
-- `🔄 Force refresh: clearing cache and reloading data` - Manual refresh triggered
+- `🔄 Cache info clicked - forcing refresh from webhook` - Clicked on cache icon
+- `🔄 Force refresh (keyboard): clearing cache and reloading data` - Used keyboard shortcut
 
 ### How Cache Invalidation Works
 
@@ -65,8 +72,9 @@ The cache automatically invalidates when you modify BigQuery queries because:
 - Check for console errors
 
 **Seeing stale data?**
-- Press `Cmd+Shift+R` to force refresh
+- Click the cache icon (💾) in footer OR press `Cmd+Shift+R` to force refresh
 - Cache should auto-invalidate after 1 hour
+- Check console for cache age
 
 **localStorage full?**
 - Old caches are automatically cleaned when quota exceeded

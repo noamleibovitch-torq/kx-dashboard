@@ -12,6 +12,8 @@ class DashboardApp {
     this.trendChart = null;
     this.segmentsPieChart = null;
     this.enrollmentTrendChart = null;
+    this.docTrendChart = null;
+    this.docEngagementChart = null;
     this.selectedSegment = null;
     
     // Color palette for segments
@@ -152,7 +154,7 @@ class DashboardApp {
     document.addEventListener('keydown', (e) => {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'R') {
         e.preventDefault();
-        console.log('🔄 Force refresh: clearing cache and reloading data');
+        console.log('🔄 Force refresh (keyboard): clearing cache and reloading data');
         this.api.invalidateCache();
         this.load();
       }
@@ -194,6 +196,18 @@ class DashboardApp {
     // Show/hide view content
     document.getElementById('academyView').classList.toggle('active', this.currentView === 'academy');
     document.getElementById('documentationView').classList.toggle('active', this.currentView === 'documentation');
+
+    // Show/hide appropriate period controls in header
+    const academyControls = document.getElementById('academyControls');
+    const docControls = document.getElementById('docControls');
+    
+    if (this.currentView === 'academy') {
+      academyControls.style.display = 'flex';
+      docControls.style.display = 'none';
+    } else if (this.currentView === 'documentation') {
+      academyControls.style.display = 'none';
+      docControls.style.display = 'flex';
+    }
 
     // Show/hide segment filter (only for academy view)
     const segmentFilter = document.getElementById('segmentFilter');
@@ -266,7 +280,24 @@ class DashboardApp {
       minute: '2-digit', 
       second: '2-digit' 
     });
-    document.getElementById('lastUpdated').textContent = `Updated: ${timeString}`;
+    
+    // Get cache stats
+    const stats = this.api.getCacheStats();
+    const cacheInfo = stats.count > 0 
+      ? ` | <span class="cache-info" id="cacheInfo" title="Click to force refresh from webhook">💾 ${stats.count} cached (${stats.totalSize}KB)</span>` 
+      : '';
+    
+    document.getElementById('lastUpdated').innerHTML = `Updated: ${timeString}${cacheInfo}`;
+    
+    // Add click handler to cache info
+    const cacheInfoEl = document.getElementById('cacheInfo');
+    if (cacheInfoEl) {
+      cacheInfoEl.onclick = () => {
+        console.log('🔄 Cache info clicked - forcing refresh from webhook');
+        this.api.invalidateCache();
+        this.load();
+      };
+    }
   }
 
   // Data Filtering
@@ -429,9 +460,9 @@ class DashboardApp {
   createKPICard({ label, sublabel, value, previousValue, delta, suffix = '' }) {
     const deltaHTML = delta ? `
       <div class="kpi-delta ${delta.abs >= 0 ? 'positive' : 'negative'}">
-        <span>${delta.abs >= 0 ? '▲' : '▼'}</span>
-        <span>${Math.abs(delta.abs)}${suffix}</span>
-        ${previousValue !== null ? `<span class="previous-value">(prev: ${previousValue}${suffix})</span>` : ''}
+        <span class="previous-value">${previousValue}${suffix}</span>
+        <span>${delta.abs >= 0 ? '↑' : '↓'} ${delta.abs >= 0 ? '+' : ''}${Math.abs(delta.abs)}${suffix}</span>
+        ${delta.percent !== null && delta.percent !== undefined ? `<span>(${delta.percent >= 0 ? '+' : ''}${delta.percent}%)</span>` : ''}
       </div>
     ` : '<div style="height: 24px;"></div>';
 
@@ -693,6 +724,8 @@ class DashboardApp {
     }
     
     const doc = this.documentationData.documentation;
+    console.log('📊 Documentation data:', doc);
+    console.log('📈 Trend data:', doc.trend);
     
     // Helper function to safely format numbers
     const formatNumber = (value, decimals = 0) => {
@@ -773,35 +806,36 @@ class DashboardApp {
       
       return `
         <div class="kpi-delta ${colorClass}">
-          <span class="previous-value">Previous: ${formatNumber(previousValue, decimals)}${suffix}</span>
-          ${arrow} ${sign}${Math.abs(absoluteValue).toFixed(decimals)}${suffix}${percentChange}
+          <span class="previous-value">${formatNumber(previousValue, decimals)}${suffix}</span>
+          <span>${arrow} ${sign}${Math.abs(absoluteValue).toFixed(decimals)}${suffix}</span>
+          ${percentChange ? `<span>${percentChange}</span>` : ''}
         </div>
       `;
     };
 
-    // Render all 6 metrics in one row
+    // Update section title with period
+    const periodTitle = doc.window?.month || 'Current Month';
+    document.getElementById('docPeriodTitle').textContent = periodTitle;
+
+    // Render all 6 metrics in one row (without individual sublabels)
     const allMetricsHTML = `
       <div class="kpi-card">
         <div class="kpi-label">Active users within timeframe</div>
-        <div class="kpi-sublabel">${doc.window?.month || 'Current Month'}</div>
         <div class="kpi-value">${formatNumber(doc.support?.active_users)}</div>
         ${renderDelta(doc.support_delta?.active_users, doc.support_previous?.active_users, 0, '', false)}
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Tickets Amount</div>
-        <div class="kpi-sublabel">${doc.window?.month || 'Current Month'}</div>
         <div class="kpi-value">${formatNumber(doc.support?.tickets_amount)}</div>
         ${renderDelta(doc.support_delta?.tickets_amount, doc.support_previous?.tickets_amount, 0, '', true)}
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Tickets Volume</div>
-        <div class="kpi-sublabel">${doc.window?.month || 'Current Month'}</div>
         <div class="kpi-value">${formatNumber(doc.support?.tickets_volume_percent, 2)}<span class="suffix">%</span></div>
         ${renderDelta(doc.support_delta?.tickets_volume_percent, doc.support_previous?.tickets_volume_percent, 2, '%', true)}
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Total Intercom Conversations</div>
-        <div class="kpi-sublabel">${doc.window?.month || 'Current Month'}</div>
         <div class="kpi-value">${formatNumber(doc.support?.total_conversations)}</div>
         ${renderDelta(doc.support_delta?.total_conversations, doc.support_previous?.total_conversations, 0, '', false)}
       </div>
@@ -810,7 +844,6 @@ class DashboardApp {
           Adoption rate
           <span class="doc-kpi-info" title="Percentage of active users who interacted with chatbot">ⓘ</span>
         </div>
-        <div class="kpi-sublabel">${doc.window?.month || 'Current Month'}</div>
         <div class="kpi-value">${formatNumber(doc.ai_agent?.adoption_rate_percent, 2)}<span class="suffix">%</span></div>
         ${renderDelta(doc.ai_agent_delta?.adoption_rate_percent, doc.ai_agent_previous?.adoption_rate_percent, 2, '%', false)}
       </div>
@@ -819,12 +852,289 @@ class DashboardApp {
           Deflection rate
           <span class="doc-kpi-info" title="Percentage of conversations resolved without human escalation">ⓘ</span>
         </div>
-        <div class="kpi-sublabel">${doc.window?.month || 'Current Month'}</div>
         <div class="kpi-value">${formatNumber(doc.ai_agent?.deflection_rate_percent, 2)}<span class="suffix">%</span></div>
         ${renderDelta(doc.ai_agent_delta?.deflection_rate_percent, doc.ai_agent_previous?.deflection_rate_percent, 2, '%', false)}
       </div>
     `;
     document.getElementById('docMetricsGrid').innerHTML = allMetricsHTML;
+
+    // Render trend charts if data available
+    if (doc.trend && doc.trend.length > 0) {
+      console.log('✅ Rendering total numbers trend chart with', doc.trend.length, 'data points');
+      this.renderDocTrendChart(doc.trend);
+    } else {
+      console.warn('❌ No total numbers trend data to render. doc.trend:', doc.trend);
+    }
+
+    if (doc.engagement_trend && doc.engagement_trend.length > 0) {
+      console.log('✅ Rendering rates trend chart with', doc.engagement_trend.length, 'data points');
+      this.renderDocEngagementChart(doc.engagement_trend);
+    } else {
+      console.warn('❌ No rates trend data to render. doc.engagement_trend:', doc.engagement_trend);
+    }
+  }
+
+  renderDocTrendChart(trendData) {
+    const ctx = document.getElementById('docTrendChart');
+    if (!ctx) return;
+
+    // Destroy existing chart
+    if (this.docTrendChart) {
+      this.docTrendChart.destroy();
+    }
+
+    // Prepare data - total numbers
+    const labels = trendData.map(d => d.month || d.fact_active_users_month_start_month);
+    const totalActiveUsers = trendData.map(d => d.total_active_users || d.fact_active_users_total_active_users || 0);
+    const totalTicketsAmount = trendData.map(d => d.total_tickets_amount || d.agg_monthly_zendesk_tickets_tickets_amountt || 0);
+    const totalConversations = trendData.map(d => d.total_conversations || d.agg_deflection_rate_total_converstions || 0);
+
+    // Create chart
+    this.docTrendChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Total Active Users',
+            data: totalActiveUsers,
+            borderColor: '#00FF88',
+            backgroundColor: 'rgba(0, 255, 136, 0.1)',
+            tension: 0.4,
+            borderWidth: 2,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Total Tickets Amount',
+            data: totalTicketsAmount,
+            borderColor: '#FF6B6B',
+            backgroundColor: 'rgba(255, 107, 107, 0.1)',
+            tension: 0.4,
+            borderWidth: 2,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Total Conversations',
+            data: totalConversations,
+            borderColor: '#00D9FF',
+            backgroundColor: 'rgba(0, 217, 255, 0.1)',
+            tension: 0.4,
+            borderWidth: 2,
+            yAxisID: 'y'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: {
+              color: '#E0E0E0',
+              font: { size: 12 },
+              usePointStyle: true,
+              padding: 15
+            },
+            onClick: function(e, legendItem, legend) {
+              const index = legendItem.datasetIndex;
+              const chart = legend.chart;
+              const meta = chart.getDatasetMeta(index);
+              
+              // Toggle visibility
+              meta.hidden = meta.hidden === null ? !chart.data.datasets[index].hidden : null;
+              
+              // Update chart with animation to trigger auto-scale
+              chart.update();
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(13, 13, 13, 0.95)',
+            titleColor: '#FFFFFF',
+            bodyColor: '#E0E0E0',
+            borderColor: '#3D3D3D',
+            borderWidth: 1,
+            padding: 12,
+            displayColors: true
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#808080', font: { size: 11 } }
+          },
+          y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+            beginAtZero: true,
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { 
+              color: '#808080',
+              font: { size: 11 },
+              callback: function(value) {
+                return value.toLocaleString();
+              }
+            }
+          }
+        },
+        onClick: (event, activeElements, chart) => {
+          // Trigger auto-scale when legend items are clicked
+          chart.update('none');
+        }
+      }
+    });
+  }
+
+  renderDocEngagementChart(engagementData) {
+    const ctx = document.getElementById('docEngagementChart');
+    if (!ctx) return;
+
+    // Destroy existing chart
+    if (this.docEngagementChart) {
+      this.docEngagementChart.destroy();
+    }
+
+    // Helper function to parse string fractions and percentages
+    const parsePercentValue = (value) => {
+      if (value === null || value === undefined) return 0;
+      
+      // If it's already a number, return it
+      if (typeof value === 'number') return value;
+      
+      // If it's a string fraction like "2289/25" or "1597/100"
+      if (typeof value === 'string' && value.includes('/')) {
+        const parts = value.split('/');
+        if (parts.length === 2) {
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator !== 0) {
+            return numerator / denominator;
+          }
+        }
+      }
+      
+      // Try to parse as regular number
+      const parsed = parseFloat(value);
+      return isNaN(parsed) ? 0 : parsed;
+    };
+
+    // Prepare data - all percentages
+    const labels = engagementData.map(d => d.month || d.fact_active_users_month_start_month);
+    const adoptionRate = engagementData.map(d => parsePercentValue(d.adoption_rate_percent));
+    const deflectionRate = engagementData.map(d => parsePercentValue(d.deflection_rate_percent));
+    const ticketsVolume = engagementData.map(d => parsePercentValue(d.tickets_volume_percent));
+
+    console.log('📊 Parsed Adoption Rate:', adoptionRate);
+    console.log('📊 Parsed Deflection Rate:', deflectionRate);
+    console.log('📊 Parsed Tickets Volume:', ticketsVolume);
+
+    // Create chart
+    this.docEngagementChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Intercom Adoption Rate',
+            data: adoptionRate,
+            borderColor: '#FF006E',
+            backgroundColor: 'rgba(255, 0, 110, 0.1)',
+            tension: 0.4,
+            borderWidth: 2,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Deflection Rate',
+            data: deflectionRate,
+            borderColor: '#00D9FF',
+            backgroundColor: 'rgba(0, 217, 255, 0.1)',
+            tension: 0.4,
+            borderWidth: 2,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Tickets Volume',
+            data: ticketsVolume,
+            borderColor: '#3D5A80',
+            backgroundColor: 'rgba(61, 90, 128, 0.1)',
+            tension: 0.4,
+            borderWidth: 2,
+            yAxisID: 'y'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: {
+              color: '#E0E0E0',
+              font: { size: 12 },
+              usePointStyle: true,
+              padding: 15
+            },
+            onClick: function(e, legendItem, legend) {
+              const index = legendItem.datasetIndex;
+              const chart = legend.chart;
+              const meta = chart.getDatasetMeta(index);
+              
+              // Toggle visibility
+              meta.hidden = meta.hidden === null ? !chart.data.datasets[index].hidden : null;
+              
+              // Update chart with animation to trigger auto-scale
+              chart.update();
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(13, 13, 13, 0.95)',
+            titleColor: '#FFFFFF',
+            bodyColor: '#E0E0E0',
+            borderColor: '#3D3D3D',
+            borderWidth: 1,
+            padding: 12,
+            displayColors: true,
+            callbacks: {
+              label: function(context) {
+                return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + '%';
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { color: '#808080', font: { size: 11 } }
+          },
+          y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+            beginAtZero: true,
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: { 
+              color: '#808080',
+              font: { size: 11 },
+              callback: function(value) {
+                return value + '%';
+              }
+            }
+          }
+        }
+      }
+    });
   }
 
   aggregateTrendByDay(trendData) {
