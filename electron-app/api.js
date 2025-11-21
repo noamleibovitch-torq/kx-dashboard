@@ -5,6 +5,93 @@ class DashboardAPI {
     this.authSecret = 'i9HpRTZLL4sq7AJW1qmpKqZsb85qB1Su9vcyvCayidk';
     // Set to true to use mock data for testing
     this.useMockData = false; // Disabled - will fetch from real webhook
+    // Enable local caching for faster development
+    this.enableCache = true; // Set to false to always fetch fresh data
+  }
+
+  // Generate a simple hash for query strings
+  hashString(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return hash.toString(36);
+  }
+
+  // Get cache key based on parameters and query hashes
+  getCacheKey(daysBack, docPeriod) {
+    const academyQuery = window.DashboardQueries.ENROLLMENTS_DASHBOARD_QUERY;
+    const docQuery = window.DashboardQueries.DOCUMENTATION_DASHBOARD_QUERY;
+    const academyHash = this.hashString(academyQuery);
+    const docHash = this.hashString(docQuery);
+    return `dashboard_cache_${daysBack}_${docPeriod}_${academyHash}_${docHash}`;
+  }
+
+  // Get cached data if available and valid
+  getCachedData(cacheKey) {
+    if (!this.enableCache) return null;
+    
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (!cached) return null;
+      
+      const { data, timestamp } = JSON.parse(cached);
+      const age = Date.now() - timestamp;
+      
+      // Cache valid for 1 hour (3600000 ms)
+      if (age < 3600000) {
+        console.log('✅ Using cached data (age:', Math.round(age / 1000), 'seconds)');
+        return data;
+      } else {
+        console.log('⏰ Cache expired, fetching fresh data');
+        localStorage.removeItem(cacheKey);
+        return null;
+      }
+    } catch (error) {
+      console.error('Cache read error:', error);
+      return null;
+    }
+  }
+
+  // Store data in cache
+  setCachedData(cacheKey, data) {
+    if (!this.enableCache) return;
+    
+    try {
+      const cacheEntry = {
+        data: data,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(cacheKey, JSON.stringify(cacheEntry));
+      console.log('💾 Data cached for future use');
+    } catch (error) {
+      console.error('Cache write error:', error);
+      // If localStorage is full, clear old caches
+      if (error.name === 'QuotaExceededError') {
+        this.clearOldCaches();
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({ data, timestamp: Date.now() }));
+        } catch (e) {
+          console.error('Failed to cache even after cleanup:', e);
+        }
+      }
+    }
+  }
+
+  // Clear old cache entries
+  clearOldCaches() {
+    const keys = Object.keys(localStorage);
+    const cacheKeys = keys.filter(k => k.startsWith('dashboard_cache_'));
+    console.log('🧹 Clearing', cacheKeys.length, 'old cache entries');
+    cacheKeys.forEach(key => localStorage.removeItem(key));
+  }
+
+  // Manual cache invalidation
+  invalidateCache() {
+    this.clearOldCaches();
+    console.log('🗑️ All caches cleared');
   }
 
   prepareQuery(daysBack) {
@@ -35,6 +122,14 @@ class DashboardAPI {
       };
     }
 
+    // Check cache first
+    const cacheKey = this.getCacheKey(daysBack, docPeriod);
+    const cachedData = this.getCachedData(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
+
+    // No valid cache, fetch from webhook
     try {
       // Prepare both queries
       const academyQuery = this.prepareQuery(daysBack);
@@ -43,7 +138,7 @@ class DashboardAPI {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
 
-      console.log('Sending both academy and documentation queries...');
+      console.log('🌐 Fetching fresh data from webhook...');
 
       const response = await fetch(this.webhookURL, {
         method: 'POST',
@@ -67,6 +162,10 @@ class DashboardAPI {
       }
 
       const data = await response.json();
+      
+      // Cache the response for future use
+      this.setCachedData(cacheKey, data);
+      
       // Response should contain enrollments, labs, and documentation
       return data;
     } catch (error) {

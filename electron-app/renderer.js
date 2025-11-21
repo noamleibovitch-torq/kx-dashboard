@@ -147,6 +147,16 @@ class DashboardApp {
     document.getElementById('clearFilter').addEventListener('click', () => {
       this.setSegmentFilter(null);
     });
+
+    // Keyboard shortcut to clear cache: Cmd+Shift+R (Mac) or Ctrl+Shift+R (Windows)
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'R') {
+        e.preventDefault();
+        console.log('🔄 Force refresh: clearing cache and reloading data');
+        this.api.invalidateCache();
+        this.load();
+      }
+    });
   }
 
   updatePeriodDisplay() {

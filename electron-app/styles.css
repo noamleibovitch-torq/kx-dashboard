@@ -101,6 +101,10 @@ body {
   gap: 20px;
 }
 
+.view-content .controls {
+  margin-bottom: 16px;
+}
+
 .days-back-control {
   display: flex;
   align-items: center;
