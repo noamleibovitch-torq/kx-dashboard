@@ -176,9 +176,12 @@ class DashboardAPI {
       const { monthStart, documentationQuery } = this.prepareDocumentationQuery(docPeriod);
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 1 minute timeout for debugging
 
       console.log('🌐 Fetching fresh data from webhook...');
+      console.log('📋 Webhook URL:', this.webhookURL);
+      console.log('📋 Days back:', daysBack);
+      console.log('📋 Doc period:', docPeriod);
       console.log('📋 Documentation query includes 12-month trend data');
 
       const response = await fetch(this.webhookURL, {

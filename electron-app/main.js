@@ -1,8 +1,9 @@
 // Main process - Electron entry point
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, powerSaveBlocker } = require('electron');
 const path = require('path');
 
 let mainWindow;
+let powerSaveBlockerId;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -42,6 +43,12 @@ function createWindow() {
 app.whenReady().then(() => {
   createWindow();
 
+  // Prevent display from sleeping (keep dashboard visible)
+  powerSaveBlockerId = powerSaveBlocker.start('prevent-display-sleep');
+  console.log('🔋 Power save blocker started - screen will stay awake');
+  console.log('   Blocker ID:', powerSaveBlockerId);
+  console.log('   Is blocking:', powerSaveBlocker.isStarted(powerSaveBlockerId));
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -50,8 +57,22 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+  // Stop power save blocker when app closes
+  if (powerSaveBlockerId && powerSaveBlocker.isStarted(powerSaveBlockerId)) {
+    powerSaveBlocker.stop(powerSaveBlockerId);
+    console.log('🔋 Power save blocker stopped');
+  }
+  
   if (process.platform !== 'darwin') {
     app.quit();
+  }
+});
+
+app.on('before-quit', () => {
+  // Ensure power save blocker is stopped before quitting
+  if (powerSaveBlockerId && powerSaveBlocker.isStarted(powerSaveBlockerId)) {
+    powerSaveBlocker.stop(powerSaveBlockerId);
+    console.log('🔋 Power save blocker stopped (before-quit)');
   }
 });
 

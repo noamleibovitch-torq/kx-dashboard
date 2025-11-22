@@ -1,4 +1,11 @@
 // Renderer process - UI logic and data management
+
+// Register Chart.js datalabels plugin
+if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
+  Chart.register(ChartDataLabels);
+  console.log('✅ Chart.js datalabels plugin registered');
+}
+
 class DashboardApp {
   constructor() {
     this.api = new DashboardAPI();
@@ -9,7 +16,12 @@ class DashboardApp {
     this.daysBack = this.calculateDaysBack(this.selectedPeriod);
     this.docPeriod = this.loadDocPeriod(); // 'mtd' or 'prev'
     this.refreshTimer = null;
+    this.rotationTimer = null; // For auto-rotation
+    this.rotationInterval = this.loadRotationInterval(); // seconds, 0 = disabled
+    this.showWeather = this.loadWeatherToggle();
+    this.showClock = this.loadClockToggle();
     this.trendChart = null;
+    this.guidesChart = null; // For top guides stacked bar chart
     this.segmentsPieChart = null;
     this.enrollmentTrendChart = null;
     this.docTrendChart = null;
@@ -17,23 +29,21 @@ class DashboardApp {
     this.selectedSegment = null;
     
     // Color palette for segments
+    // Match doc trend color palette (softer, professional)
     this.segmentColors = [
-      '#00FF88', // Bright green
-      '#00D9FF', // Cyan
-      '#FF6B6B', // Coral red
-      '#FFD93D', // Yellow
-      '#A259FF', // Purple
-      '#FF9CEE', // Pink
-      '#6BCF7F', // Light green
-      '#FF8C42', // Orange
-      '#4ECDC4', // Turquoise
-      '#95E1D3', // Mint
-      '#F38181', // Salmon
-      '#AA96DA', // Lavender
-      '#FCBAD3', // Light pink
-      '#FFFFD2', // Light yellow
-      '#A8D8EA', // Light blue
-      '#999999'  // Gray for others
+      '#00FF88', // Primary green (matches doc trends)
+      '#00D9FF', // Cyan (matches doc trends)
+      '#FF6B6B', // Coral (matches doc trends)
+      '#FF006E', // Magenta (matches doc trends)
+      '#3D5A80', // Blue-gray (matches doc trends)
+      '#FFB627', // Amber
+      '#8B5CF6', // Purple
+      '#10B981', // Emerald
+      '#F59E0B', // Orange
+      '#EC4899', // Pink
+      '#6366F1', // Indigo
+      '#14B8A6', // Teal
+      '#808080'  // Gray for others
     ];
     
     this.init();
@@ -46,6 +56,10 @@ class DashboardApp {
     this.updateViewDisplay();
     this.load();
     this.startAutoRefresh();
+    this.startClock();
+    this.loadWeather();
+    this.startAutoRotation(); // Start auto-rotation if enabled
+    this.updateWidgetVisibility(); // Apply visibility settings
   }
 
   // Persistence
@@ -76,9 +90,55 @@ class DashboardApp {
     localStorage.setItem('docPeriod', this.docPeriod);
   }
 
+  // Trend filter persistence
+  loadTrendFilters(chartId) {
+    const saved = localStorage.getItem(`trendFilters_${chartId}`);
+    return saved ? JSON.parse(saved) : {};
+  }
+
+  saveTrendFilters(chartId, filters) {
+    localStorage.setItem(`trendFilters_${chartId}`, JSON.stringify(filters));
+  }
+
+  // Settings persistence
+  loadRotationInterval() {
+    const saved = localStorage.getItem('rotationInterval');
+    return saved ? parseInt(saved, 10) : 0; // Default: disabled
+  }
+
+  saveRotationInterval(interval) {
+    localStorage.setItem('rotationInterval', interval.toString());
+  }
+
+  loadWeatherToggle() {
+    const saved = localStorage.getItem('showWeather');
+    return saved === null ? true : saved === 'true'; // Default: true
+  }
+
+  saveWeatherToggle(show) {
+    localStorage.setItem('showWeather', show.toString());
+  }
+
+  loadClockToggle() {
+    const saved = localStorage.getItem('showClock');
+    return saved === null ? true : saved === 'true'; // Default: true
+  }
+
+  saveClockToggle(show) {
+    localStorage.setItem('showClock', show.toString());
+  }
+
   calculateDaysBack(period) {
     if (period === '7') return 7;
     if (period === '30') return 30;
+    if (period === 'MTD') {
+      // Month to Date - calculate days from start of current month to today
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const diffTime = Math.abs(now - startOfMonth);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return Math.max(diffDays, 1); // Return at least 1 day
+    }
     if (period === 'Q') {
       // Quarter = 90 days (approximately 3 months)
       return 90;
@@ -159,6 +219,70 @@ class DashboardApp {
         this.load();
       }
     });
+
+    // Cache info click to force refresh
+    const cacheInfo = document.getElementById('cacheInfo');
+    if (cacheInfo) {
+      cacheInfo.addEventListener('click', () => {
+        console.log('🔄 Cache info clicked: clearing cache and reloading data');
+        this.api.invalidateCache();
+        this.load();
+      });
+    }
+
+    // Settings modal
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const closeSettings = document.getElementById('closeSettings');
+    const rotateInterval = document.getElementById('rotateInterval');
+    const showWeather = document.getElementById('showWeather');
+    const showClock = document.getElementById('showClock');
+
+    if (settingsBtn && settingsModal && closeSettings) {
+      settingsBtn.addEventListener('click', () => {
+        settingsModal.classList.add('active');
+        // Load current settings into modal
+        rotateInterval.value = this.rotationInterval.toString();
+        showWeather.checked = this.showWeather;
+        showClock.checked = this.showClock;
+      });
+
+      closeSettings.addEventListener('click', () => {
+        settingsModal.classList.remove('active');
+      });
+
+      // Close modal on background click
+      settingsModal.addEventListener('click', (e) => {
+        if (e.target === settingsModal) {
+          settingsModal.classList.remove('active');
+        }
+      });
+
+      // Rotation interval change
+      rotateInterval.addEventListener('change', (e) => {
+        const newInterval = parseInt(e.target.value, 10);
+        console.log('⏱️  Rotation interval changed to:', newInterval);
+        this.rotationInterval = newInterval;
+        this.saveRotationInterval(newInterval);
+        this.startAutoRotation(); // Restart with new interval
+      });
+
+      // Weather toggle
+      showWeather.addEventListener('change', (e) => {
+        console.log('🌤️  Weather toggle changed to:', e.target.checked);
+        this.showWeather = e.target.checked;
+        this.saveWeatherToggle(e.target.checked);
+        this.updateWidgetVisibility();
+      });
+
+      // Clock toggle
+      showClock.addEventListener('change', (e) => {
+        console.log('🕒 Clock toggle changed to:', e.target.checked);
+        this.showClock = e.target.checked;
+        this.saveClockToggle(e.target.checked);
+        this.updateWidgetVisibility();
+      });
+    }
   }
 
   updatePeriodDisplay() {
@@ -229,7 +353,18 @@ class DashboardApp {
       
       // Single API call that returns both academy and documentation data
       const result = await this.api.fetchDashboard(this.daysBack, this.docPeriod);
-      console.log('Dashboard data received:', result);
+      console.log('📥 Dashboard data received:', result);
+      
+      // Log the structure
+      console.log('📊 Data structure check:');
+      console.log('  - enrollments:', result.enrollments ? '✅' : '❌');
+      console.log('  - labs:', result.labs ? '✅' : '❌');
+      console.log('  - documentation:', result.documentation ? '✅' : '❌');
+      
+      if (result.enrollments) {
+        console.log('  - enrollments.guides:', result.enrollments.guides ? '✅' : '❌');
+        console.log('  - enrollments.window:', result.enrollments.window ? '✅' : '❌');
+      }
       
       // Split the combined response
       this.data = result; // Contains enrollments and labs
@@ -393,6 +528,19 @@ class DashboardApp {
 
   renderKPIs(displayData = this.data) {
     const { enrollments, labs } = displayData;
+    
+    // Validate data structure
+    if (!enrollments || !enrollments.window || !labs) {
+      console.error('❌ Invalid data structure:');
+      console.error('  enrollments:', enrollments);
+      console.error('  labs:', labs);
+      const kpiGrid = document.getElementById('kpiGrid');
+      if (kpiGrid) {
+        kpiGrid.innerHTML = '<p style="color: #FF6B6B; padding: 20px;">Error loading KPI data. Please check the console for details.</p>';
+      }
+      return;
+    }
+    
     const kpis = [
       {
         label: 'Total Enrollments',
@@ -481,16 +629,79 @@ class DashboardApp {
   renderEnrollments(displayData = this.data) {
     const { enrollments } = displayData;
     
-    // Top Guides
-    const maxCount = Math.max(...enrollments.guides.top.map(g => g.count), enrollments.guides.others.count);
-    const guidesHTML = [
-      ...enrollments.guides.top.map(guide => this.createGuideBar(guide, maxCount)),
-      this.createGuideBar({ title: 'Others', count: enrollments.guides.others.count, percent: enrollments.guides.others.percent }, maxCount, true)
-    ].join('');
-    document.getElementById('guidesChart').innerHTML = guidesHTML;
+    // Validate enrollments data
+    if (!enrollments || !enrollments.guides || !enrollments.guides.top || !enrollments.guides.others) {
+      console.error('❌ Invalid enrollments data structure:');
+      console.error('  enrollments:', enrollments);
+      const guidesChart = document.getElementById('guidesChart');
+      if (guidesChart) {
+        guidesChart.innerHTML = '<p style="color: #FF6B6B; padding: 20px;">Error loading guides data. Please check the console.</p>';
+      }
+      return;
+    }
+    
+    // Top Guides - now with stacked bars
+    const allGuides = [
+      ...enrollments.guides.top,
+      {
+        title: 'Others',
+        count: enrollments.guides.others.count,
+        completed_passed: enrollments.guides.others.completed_passed,
+        in_progress: enrollments.guides.others.in_progress,
+        not_started: enrollments.guides.others.not_started,
+        percent: enrollments.guides.others.percent
+      }
+    ];
+    
+    this.renderGuidesChart(allGuides);
     
     // Enrollment trend chart - using mock daily data based on current/previous
     this.renderEnrollmentTrendChart(enrollments);
+  }
+
+  renderGuidesChart(guides) {
+    const guidesContainer = document.getElementById('guidesChart');
+    
+    // Find the max count for scaling
+    const maxCount = Math.max(...guides.map(g => g.count));
+    
+    // Generate HTML for each guide
+    const guidesHTML = guides.map(guide => {
+      const isOthers = guide.title === 'Others';
+      const completed = guide.completed_passed || 0;
+      const inProgress = guide.in_progress || 0;
+      const notStarted = guide.not_started || 0;
+      const total = guide.count;
+      
+      // Calculate percentages for bar widths
+      const completedWidth = (completed / maxCount) * 100;
+      const inProgressWidth = (inProgress / maxCount) * 100;
+      const notStartedWidth = (notStarted / maxCount) * 100;
+      
+      return `
+        <div class="guide-item">
+          <div class="guide-header">
+            <span class="guide-title">${guide.title}</span>
+            <span class="guide-stats">
+              <span class="count">${total}</span> <span class="percent">(${guide.percent}%)</span>
+            </span>
+          </div>
+          <div class="guide-bar-container">
+            <div class="guide-bar-segment" 
+                 style="width: ${notStartedWidth}%; background: rgba(128, 128, 128, 0.8); border: 2px solid #999999;"
+                 title="Not Started: ${notStarted}"></div>
+            <div class="guide-bar-segment" 
+                 style="width: ${inProgressWidth}%; background: rgba(0, 217, 255, 0.8); border: 2px solid #00D9FF;"
+                 title="In Progress: ${inProgress}"></div>
+            <div class="guide-bar-segment" 
+                 style="width: ${completedWidth}%; background: rgba(0, 255, 136, 0.8); border: 2px solid #00FF88;"
+                 title="Completed: ${completed}"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    guidesContainer.innerHTML = guidesHTML;
   }
 
   renderEnrollmentTrendChart(enrollments) {
@@ -512,23 +723,38 @@ class DashboardApp {
           {
             label: 'Completed',
             data: dailyData.map(point => point.completed_passed),
-            backgroundColor: '#00FF88',
+            backgroundColor: 'rgba(0, 255, 136, 0.8)',
             borderColor: '#00FF88',
-            borderWidth: 1
+            borderWidth: 2,
+            borderRadius: 4,
+            shadowOffsetX: 0,
+            shadowOffsetY: 0,
+            shadowBlur: 10,
+            shadowColor: 'rgba(0, 255, 136, 0.5)'
           },
           {
             label: 'In Progress',
             data: dailyData.map(point => point.in_progress),
-            backgroundColor: '#00D9FF',
+            backgroundColor: 'rgba(0, 217, 255, 0.8)',
             borderColor: '#00D9FF',
-            borderWidth: 1
+            borderWidth: 2,
+            borderRadius: 4,
+            shadowOffsetX: 0,
+            shadowOffsetY: 0,
+            shadowBlur: 10,
+            shadowColor: 'rgba(0, 217, 255, 0.5)'
           },
           {
             label: 'Not Started',
             data: dailyData.map(point => point.not_started),
-            backgroundColor: '#999999',
+            backgroundColor: 'rgba(128, 128, 128, 0.8)',
             borderColor: '#999999',
-            borderWidth: 1
+            borderWidth: 2,
+            borderRadius: 4,
+            shadowOffsetX: 0,
+            shadowOffsetY: 0,
+            shadowBlur: 10,
+            shadowColor: 'rgba(128, 128, 128, 0.5)'
           }
         ]
       },
@@ -538,11 +764,19 @@ class DashboardApp {
         plugins: {
           legend: {
             labels: {
-              color: '#999999',
-              font: { size: 12 }
+              color: '#E0E0E0',
+              font: { size: 12 },
+              usePointStyle: true,
+              padding: 15
             }
           },
           tooltip: {
+            backgroundColor: 'rgba(13, 13, 13, 0.95)',
+            titleColor: '#FFFFFF',
+            bodyColor: '#E0E0E0',
+            borderColor: '#3D3D3D',
+            borderWidth: 1,
+            padding: 12,
             mode: 'index',
             intersect: false,
             callbacks: {
@@ -561,18 +795,18 @@ class DashboardApp {
             stacked: true,
             beginAtZero: true,
             ticks: { 
-              color: '#999999',
+              color: '#808080',
               font: { size: 11 }
             },
             grid: { 
-              color: 'rgba(255, 255, 255, 0.1)',
+              color: 'rgba(255, 255, 255, 0.05)',
               drawBorder: false
             }
           },
           x: {
             stacked: true,
             ticks: { 
-              color: '#999999',
+              color: '#808080',
               font: { size: 10 },
               maxRotation: 45,
               minRotation: 45
@@ -584,23 +818,6 @@ class DashboardApp {
         }
       }
     });
-  }
-
-  createGuideBar(guide, maxCount, isOthers = false) {
-    const width = (guide.count / maxCount) * 100;
-    return `
-      <div class="guide-item">
-        <div class="guide-header">
-          <span class="guide-title">${guide.title}</span>
-          <span class="guide-stats">
-            <span class="count">${guide.count}</span> (${guide.percent}%)
-          </span>
-        </div>
-        <div class="guide-bar-container">
-          <div class="guide-bar ${isOthers ? 'others' : ''}" style="width: ${width}%"></div>
-        </div>
-      </div>
-    `;
   }
 
   getSegmentColor(index) {
@@ -636,16 +853,16 @@ class DashboardApp {
     // Render pie chart for current segments
     this.renderSegmentsPieChart(segments.current);
     
-    // Render legend
+    // Render legend with neon Tron styling
     const legendHTML = segments.current.map((seg, index) => {
       const segmentName = seg.segment || '(none)';
       const color = this.getSegmentColor(index);
       const isSelected = this.selectedSegment === segmentName;
       return `
         <div class="segment-legend-item ${isSelected ? 'selected' : ''}" data-segment="${segmentName}">
-          <div class="segment-legend-dot" style="background: ${color};"></div>
-          <div class="segment-legend-label">${segmentName}</div>
-          <div class="segment-legend-value">${seg.count} (${seg.percent}%)</div>
+          <div class="segment-legend-dot" style="background: ${color}; box-shadow: 0 0 4px ${color}AA, 0 0 6px ${color}66;"></div>
+          <span class="segment-legend-label">${segmentName}</span>
+          <span class="segment-legend-value" style="color: ${color};">${seg.percent}%</span>
         </div>
       `;
     }).join('');
@@ -672,29 +889,57 @@ class DashboardApp {
     const labels = segments.map(s => s.segment || '(none)');
     const data = segments.map(s => s.percent);
     const colors = segments.map((s, index) => this.getSegmentColor(index));
+    
+    // Create semi-transparent versions for fills
+    const backgroundColors = colors.map(color => {
+      // Convert hex to rgba with 0.85 alpha for vibrant Tron look
+      const r = parseInt(color.slice(1, 3), 16);
+      const g = parseInt(color.slice(3, 5), 16);
+      const b = parseInt(color.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, 0.85)`;
+    });
 
     this.segmentsPieChart = new Chart(ctx, {
-      type: 'pie',
+      type: 'doughnut',
       data: {
         labels: labels,
         datasets: [{
           data: data,
-          backgroundColor: colors,
-          borderColor: '#0D0D0D',
-          borderWidth: 2
+          backgroundColor: backgroundColors,
+          borderColor: colors,
+          borderWidth: 3,
+          hoverBorderColor: '#FFFFFF',
+          hoverBorderWidth: 4,
+          hoverOffset: 12,
+          offset: 0,
+          spacing: 2
         }]
       },
       options: {
         responsive: true,
-        maintainAspectRatio: true,
+        maintainAspectRatio: false,
+        cutout: '50%',
         plugins: {
           legend: {
             display: false
           },
           tooltip: {
+            backgroundColor: 'rgba(13, 13, 13, 0.95)',
+            titleColor: '#FFFFFF',
+            titleFont: { size: 14, weight: 'bold' },
+            bodyColor: '#E0E0E0',
+            bodyFont: { size: 13 },
+            borderColor: '#3D3D3D',
+            borderWidth: 1,
+            padding: 14,
+            displayColors: true,
+            usePointStyle: true,
             callbacks: {
               label: function(context) {
-                return context.label + ': ' + context.parsed + '%';
+                const label = context.label || '';
+                const value = context.parsed || 0;
+                const count = segments[context.dataIndex].count || 0;
+                return `${label}: ${value.toFixed(1)}% (${count} users)`;
               }
             }
           }
@@ -883,6 +1128,9 @@ class DashboardApp {
       this.docTrendChart.destroy();
     }
 
+    // Load saved filter states
+    const savedFilters = this.loadTrendFilters('docTrend');
+
     // Prepare data - total numbers
     const labels = trendData.map(d => d.month || d.fact_active_users_month_start_month);
     const totalActiveUsers = trendData.map(d => d.total_active_users || d.fact_active_users_total_active_users || 0);
@@ -901,8 +1149,14 @@ class DashboardApp {
             borderColor: '#00FF88',
             backgroundColor: 'rgba(0, 255, 136, 0.1)',
             tension: 0.4,
-            borderWidth: 2,
-            yAxisID: 'y'
+            borderWidth: 3,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            pointBackgroundColor: '#00FF88',
+            pointBorderColor: '#FFFFFF',
+            pointBorderWidth: 2,
+            yAxisID: 'y',
+            hidden: savedFilters['Total Active Users'] === true
           },
           {
             label: 'Total Tickets Amount',
@@ -910,8 +1164,14 @@ class DashboardApp {
             borderColor: '#FF6B6B',
             backgroundColor: 'rgba(255, 107, 107, 0.1)',
             tension: 0.4,
-            borderWidth: 2,
-            yAxisID: 'y'
+            borderWidth: 3,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            pointBackgroundColor: '#FF6B6B',
+            pointBorderColor: '#FFFFFF',
+            pointBorderWidth: 2,
+            yAxisID: 'y',
+            hidden: savedFilters['Total Tickets Amount'] === true
           },
           {
             label: 'Total Conversations',
@@ -919,8 +1179,14 @@ class DashboardApp {
             borderColor: '#00D9FF',
             backgroundColor: 'rgba(0, 217, 255, 0.1)',
             tension: 0.4,
-            borderWidth: 2,
-            yAxisID: 'y'
+            borderWidth: 3,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            pointBackgroundColor: '#00D9FF',
+            pointBorderColor: '#FFFFFF',
+            pointBorderWidth: 2,
+            yAxisID: 'y',
+            hidden: savedFilters['Total Conversations'] === true
           }
         ]
       },
@@ -932,6 +1198,33 @@ class DashboardApp {
           intersect: false
         },
         plugins: {
+          datalabels: {
+            display: true,
+            anchor: 'end',
+            align: 'top',
+            offset: 6,
+            color: function(context) {
+              return context.dataset.borderColor;
+            },
+            font: {
+              size: 11,
+              weight: 'bold'
+            },
+            formatter: function(value) {
+              if (value === null || value === undefined || value === 0) return '';
+              return value.toLocaleString();
+            },
+            backgroundColor: 'rgba(13, 13, 13, 0.9)',
+            borderRadius: 4,
+            padding: {
+              top: 3,
+              bottom: 3,
+              left: 5,
+              right: 5
+            },
+            textStrokeColor: 'rgba(0, 0, 0, 0.8)',
+            textStrokeWidth: 2
+          },
           legend: {
             display: true,
             position: 'top',
@@ -941,13 +1234,21 @@ class DashboardApp {
               usePointStyle: true,
               padding: 15
             },
-            onClick: function(e, legendItem, legend) {
+            onClick: (e, legendItem, legend) => {
               const index = legendItem.datasetIndex;
               const chart = legend.chart;
               const meta = chart.getDatasetMeta(index);
               
               // Toggle visibility
               meta.hidden = meta.hidden === null ? !chart.data.datasets[index].hidden : null;
+              
+              // Save filter state
+              const filters = {};
+              chart.data.datasets.forEach((dataset, i) => {
+                const datasetMeta = chart.getDatasetMeta(i);
+                filters[dataset.label] = datasetMeta.hidden === true;
+              });
+              this.saveTrendFilters('docTrend', filters);
               
               // Update chart with animation to trigger auto-scale
               chart.update();
@@ -1000,6 +1301,9 @@ class DashboardApp {
       this.docEngagementChart.destroy();
     }
 
+    // Load saved filter states
+    const savedFilters = this.loadTrendFilters('docEngagement');
+
     // Helper function to parse string fractions and percentages
     const parsePercentValue = (value) => {
       if (value === null || value === undefined) return 0;
@@ -1043,29 +1347,47 @@ class DashboardApp {
           {
             label: 'Intercom Adoption Rate',
             data: adoptionRate,
-            borderColor: '#FF006E',
-            backgroundColor: 'rgba(255, 0, 110, 0.1)',
+            borderColor: '#00D9FF',
+            backgroundColor: 'rgba(0, 217, 255, 0.15)',
             tension: 0.4,
-            borderWidth: 2,
-            yAxisID: 'y'
+            borderWidth: 4,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: '#00D9FF',
+            pointBorderColor: '#FFFFFF',
+            pointBorderWidth: 2,
+            yAxisID: 'y',
+            hidden: savedFilters['Intercom Adoption Rate'] === true
           },
           {
             label: 'Deflection Rate',
             data: deflectionRate,
-            borderColor: '#00D9FF',
-            backgroundColor: 'rgba(0, 217, 255, 0.1)',
+            borderColor: '#3D5A80',
+            backgroundColor: 'rgba(61, 90, 128, 0.15)',
             tension: 0.4,
-            borderWidth: 2,
-            yAxisID: 'y'
+            borderWidth: 4,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: '#3D5A80',
+            pointBorderColor: '#FFFFFF',
+            pointBorderWidth: 2,
+            yAxisID: 'y',
+            hidden: savedFilters['Deflection Rate'] === true
           },
           {
             label: 'Tickets Volume',
             data: ticketsVolume,
-            borderColor: '#3D5A80',
-            backgroundColor: 'rgba(61, 90, 128, 0.1)',
+            borderColor: '#FF006E',
+            backgroundColor: 'rgba(255, 0, 110, 0.15)',
             tension: 0.4,
-            borderWidth: 2,
-            yAxisID: 'y'
+            borderWidth: 4,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: '#FF006E',
+            pointBorderColor: '#FFFFFF',
+            pointBorderWidth: 2,
+            yAxisID: 'y',
+            hidden: savedFilters['Tickets Volume'] === true
           }
         ]
       },
@@ -1077,6 +1399,33 @@ class DashboardApp {
           intersect: false
         },
         plugins: {
+          datalabels: {
+            display: true,
+            anchor: 'end',
+            align: 'top',
+            offset: 6,
+            color: function(context) {
+              return context.dataset.borderColor;
+            },
+            font: {
+              size: 11,
+              weight: 'bold'
+            },
+            formatter: function(value) {
+              if (value === null || value === undefined || value === 0) return '';
+              return value.toFixed(1) + '%';
+            },
+            backgroundColor: 'rgba(13, 13, 13, 0.9)',
+            borderRadius: 4,
+            padding: {
+              top: 3,
+              bottom: 3,
+              left: 5,
+              right: 5
+            },
+            textStrokeColor: 'rgba(0, 0, 0, 0.8)',
+            textStrokeWidth: 2
+          },
           legend: {
             display: true,
             position: 'top',
@@ -1086,13 +1435,21 @@ class DashboardApp {
               usePointStyle: true,
               padding: 15
             },
-            onClick: function(e, legendItem, legend) {
+            onClick: (e, legendItem, legend) => {
               const index = legendItem.datasetIndex;
               const chart = legend.chart;
               const meta = chart.getDatasetMeta(index);
               
               // Toggle visibility
               meta.hidden = meta.hidden === null ? !chart.data.datasets[index].hidden : null;
+              
+              // Save filter state
+              const filters = {};
+              chart.data.datasets.forEach((dataset, i) => {
+                const datasetMeta = chart.getDatasetMeta(i);
+                filters[dataset.label] = datasetMeta.hidden === true;
+              });
+              this.saveTrendFilters('docEngagement', filters);
               
               // Update chart with animation to trigger auto-scale
               chart.update();
@@ -1122,7 +1479,7 @@ class DashboardApp {
             type: 'linear',
             display: true,
             position: 'left',
-            beginAtZero: true,
+            beginAtZero: false,
             grid: { color: 'rgba(255, 255, 255, 0.05)' },
             ticks: { 
               color: '#808080',
@@ -1198,16 +1555,26 @@ class DashboardApp {
           {
             label: 'Passed Checks',
             data: dailyData.map(point => point.passed_checks),
-            backgroundColor: '#00FF88',
+            backgroundColor: 'rgba(0, 255, 136, 0.8)',
             borderColor: '#00FF88',
-            borderWidth: 1
+            borderWidth: 2,
+            borderRadius: 4,
+            shadowOffsetX: 0,
+            shadowOffsetY: 0,
+            shadowBlur: 10,
+            shadowColor: 'rgba(0, 255, 136, 0.5)'
           },
           {
             label: 'Failed Checks',
             data: dailyData.map(point => point.failed_checks),
-            backgroundColor: '#FF006E',
+            backgroundColor: 'rgba(255, 0, 110, 0.8)',
             borderColor: '#FF006E',
-            borderWidth: 1
+            borderWidth: 2,
+            borderRadius: 4,
+            shadowOffsetX: 0,
+            shadowOffsetY: 0,
+            shadowBlur: 10,
+            shadowColor: 'rgba(255, 0, 110, 0.5)'
           }
         ]
       },
@@ -1217,11 +1584,19 @@ class DashboardApp {
         plugins: {
           legend: {
             labels: {
-              color: '#999999',
-              font: { size: 12 }
+              color: '#E0E0E0',
+              font: { size: 12 },
+              usePointStyle: true,
+              padding: 15
             }
           },
           tooltip: {
+            backgroundColor: 'rgba(13, 13, 13, 0.95)',
+            titleColor: '#FFFFFF',
+            bodyColor: '#E0E0E0',
+            borderColor: '#3D3D3D',
+            borderWidth: 1,
+            padding: 12,
             mode: 'index',
             intersect: false,
             callbacks: {
@@ -1240,18 +1615,18 @@ class DashboardApp {
             stacked: true,
             beginAtZero: true,
             ticks: { 
-              color: '#999999',
+              color: '#808080',
               font: { size: 11 }
             },
             grid: { 
-              color: 'rgba(255, 255, 255, 0.1)',
+              color: 'rgba(255, 255, 255, 0.05)',
               drawBorder: false
             }
           },
           x: {
             stacked: true,
             ticks: { 
-              color: '#999999',
+              color: '#808080',
               font: { size: 10 },
               maxRotation: 45,
               minRotation: 45
@@ -1275,6 +1650,209 @@ class DashboardApp {
   formatTime(isoString) {
     const date = new Date(isoString);
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // Clock functionality
+  startClock() {
+    this.updateClock();
+    setInterval(() => this.updateClock(), 1000);
+  }
+
+  updateClock() {
+    const now = new Date();
+    const clockElement = document.getElementById('headerClock');
+    
+    if (clockElement) {
+      // Manual formatting to ensure proper 24-hour format (00:00:00 for midnight, not 24:00:00)
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      const timeStr = `${hours}:${minutes}:${seconds}`;
+      
+      const dateStr = now.toLocaleDateString('en-US', { 
+        weekday: 'short', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+      
+      clockElement.querySelector('.clock-time').textContent = timeStr;
+      clockElement.querySelector('.clock-date').textContent = dateStr;
+    }
+  }
+
+  // Weather functionality
+  getWeatherIcon(weatherCode) {
+    // Weather codes from wttr.in - return SVG-style unicode symbols
+    const iconMap = {
+      '113': '◉',   // Sunny/Clear - filled circle
+      '116': '◐',   // Partly cloudy - half circle
+      '119': '◯',   // Cloudy - hollow circle
+      '122': '◯',   // Overcast
+      '143': '≋',   // Mist - wavy lines
+      '176': '⌇',   // Patchy rain possible
+      '179': '❄',   // Patchy snow possible
+      '182': '◈',   // Patchy sleet possible
+      '185': '⌇',   // Patchy freezing drizzle
+      '200': '⚡',  // Thundery outbreaks
+      '227': '❄',   // Blowing snow
+      '230': '❄',   // Blizzard
+      '248': '≋',   // Fog
+      '260': '≋',   // Freezing fog
+      '263': '⌇',   // Patchy light drizzle
+      '266': '⌇',   // Light drizzle
+      '281': '⌇',   // Freezing drizzle
+      '284': '⌇',   // Heavy freezing drizzle
+      '293': '⌇',   // Patchy light rain
+      '296': '⌇',   // Light rain
+      '299': '◐',   // Moderate rain at times
+      '302': '◐',   // Moderate rain
+      '305': '◨',   // Heavy rain at times
+      '308': '◨',   // Heavy rain
+      '311': '⌇',   // Light freezing rain
+      '314': '◨',   // Moderate or heavy freezing rain
+      '317': '◈',   // Light sleet
+      '320': '◈',   // Moderate or heavy sleet
+      '323': '❄',   // Patchy light snow
+      '326': '❄',   // Light snow
+      '329': '❄',   // Patchy moderate snow
+      '332': '❄',   // Moderate snow
+      '335': '❄',   // Patchy heavy snow
+      '338': '❄',   // Heavy snow
+      '350': '◈',   // Ice pellets
+      '353': '⌇',   // Light rain shower
+      '356': '◨',   // Moderate or heavy rain shower
+      '359': '◨',   // Torrential rain shower
+      '362': '◈',   // Light sleet showers
+      '365': '◈',   // Moderate or heavy sleet showers
+      '368': '❄',   // Light snow showers
+      '371': '❄',   // Moderate or heavy snow showers
+      '374': '◈',   // Light showers of ice pellets
+      '377': '◈',   // Moderate or heavy showers of ice pellets
+      '386': '⚡',  // Patchy light rain with thunder
+      '389': '⚡',  // Moderate or heavy rain with thunder
+      '392': '⚡',  // Patchy light snow with thunder
+      '395': '⚡'   // Moderate or heavy snow with thunder
+    };
+    
+    return iconMap[weatherCode] || '◉';
+  }
+
+  async loadWeather() {
+    try {
+      // Using wttr.in for simple weather without API key
+      // Try with a timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch('https://wttr.in/?format=j1', {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      console.log('🌤️ Weather data received successfully');
+      
+      if (data && data.current_condition && data.current_condition[0]) {
+        const current = data.current_condition[0];
+        const location = data.nearest_area && data.nearest_area[0];
+        
+        const tempC = Math.round(current.temp_C);
+        const weatherCode = current.weatherCode;
+        const weatherDesc = current.weatherDesc && current.weatherDesc[0] ? 
+          current.weatherDesc[0].value : 'Unknown';
+        
+        console.log('🌤️ Weather Code:', weatherCode, '- Description:', weatherDesc);
+        
+        const locationName = location ? 
+          (location.areaName && location.areaName[0] ? location.areaName[0].value : 'Unknown') : 
+          'Unknown';
+        
+        const weatherIcon = this.getWeatherIcon(weatherCode);
+        
+        const weatherElement = document.getElementById('headerWeather');
+        if (weatherElement) {
+          const iconEl = weatherElement.querySelector('.weather-icon');
+          iconEl.textContent = weatherIcon;
+          iconEl.title = weatherDesc; // Add tooltip with description
+          weatherElement.querySelector('.weather-temp').textContent = `${tempC}°C`;
+          weatherElement.querySelector('.weather-location').textContent = locationName;
+        }
+        
+        // Schedule next refresh only if successful
+        setTimeout(() => this.loadWeather(), 30 * 60 * 1000);
+      }
+    } catch (error) {
+      console.warn('⚠️ Weather fetch failed (non-critical):', error.message);
+      const weatherElement = document.getElementById('headerWeather');
+      if (weatherElement) {
+        weatherElement.querySelector('.weather-icon').textContent = '◉';
+        weatherElement.querySelector('.weather-icon').title = 'Weather unavailable';
+        weatherElement.querySelector('.weather-temp').textContent = '--°C';
+        weatherElement.querySelector('.weather-location').textContent = 'N/A';
+      }
+      
+      // Retry in 5 minutes on error
+      setTimeout(() => this.loadWeather(), 5 * 60 * 1000);
+    }
+  }
+
+  // Widget visibility
+  updateWidgetVisibility() {
+    const weatherElement = document.getElementById('headerWeather');
+    const clockElement = document.getElementById('headerClock');
+
+    if (weatherElement) {
+      weatherElement.style.display = this.showWeather ? 'flex' : 'none';
+      console.log('🌤️ Weather widget visibility:', this.showWeather ? 'visible' : 'hidden');
+    }
+
+    if (clockElement) {
+      clockElement.style.display = this.showClock ? 'flex' : 'none';
+      console.log('🕒 Clock widget visibility:', this.showClock ? 'visible' : 'hidden');
+    }
+  }
+
+  // Auto-rotation
+  startAutoRotation() {
+    // Clear existing timer
+    if (this.rotationTimer) {
+      clearInterval(this.rotationTimer);
+      this.rotationTimer = null;
+    }
+
+    if (this.rotationInterval > 0) {
+      console.log(`🔄 Auto-rotation enabled: switching views every ${this.rotationInterval} seconds`);
+      this.rotationTimer = setInterval(() => {
+        this.rotateView();
+      }, this.rotationInterval * 1000);
+    } else {
+      console.log('🔄 Auto-rotation disabled');
+    }
+  }
+
+  rotateView() {
+    // Switch between Academy and Documentation
+    this.currentView = this.currentView === 'academy' ? 'documentation' : 'academy';
+    console.log('🔄 Auto-rotating to:', this.currentView);
+    
+    this.saveView();
+    this.updateViewDisplay();
+    
+    // Load data in background if needed
+    // The load() method is already smart with caching, so it will only fetch if needed
+    this.load();
+    
+    // Render the new view
+    this.render();
   }
 }
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://hooks.torq.io">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://hooks.torq.io https://wttr.in; font-src 'self'">
   <title>KX Dashboard</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -26,37 +26,53 @@
         <button class="view-btn" data-view="documentation">Documentation</button>
       </div>
 
-      <!-- Academy Period Controls -->
-      <div id="academyControls" class="controls">
-        <div class="days-back-control">
-          <label>Period:</label>
-          <div class="period-selector">
-            <button class="period-btn active" data-period="7">7d</button>
-            <button class="period-btn" data-period="30">30d</button>
-            <button class="period-btn" data-period="Q">Q</button>
-            <button class="period-btn" data-period="YTD">YTD</button>
-          </div>
-        </div>
-        <div id="segmentFilter" class="segment-filter" style="display: none;">
-          <span class="filter-label">Filtered by:</span>
-          <span class="filter-segment" id="filterSegmentName"></span>
-          <button id="clearFilter" class="clear-filter-btn">✕</button>
-        </div>
+      <!-- Segment Filter (Academy Only) -->
+      <div id="segmentFilter" class="segment-filter" style="display: none;">
+        <span class="filter-label">Filtered by:</span>
+        <span class="filter-segment" id="filterSegmentName"></span>
+        <button id="clearFilter" class="clear-filter-btn">✕</button>
       </div>
 
-      <!-- Documentation Period Controls -->
-      <div id="docControls" class="controls" style="display: none;">
-        <div class="days-back-control">
-          <label>Period:</label>
-          <div class="period-selector">
-            <button class="doc-period-btn active" data-doc-period="mtd">Month to Date</button>
-            <button class="doc-period-btn" data-doc-period="prev">Previous Month</button>
+      <!-- Right Side Info (Period Controls, Weather & Clock) -->
+      <div class="header-right">
+        <!-- Academy Period Controls -->
+        <div id="academyControls" class="controls">
+          <div class="days-back-control">
+            <label>Period:</label>
+            <div class="period-selector">
+              <button class="period-btn active" data-period="7">7d</button>
+              <button class="period-btn" data-period="MTD">MTD</button>
+              <button class="period-btn" data-period="30">30d</button>
+              <button class="period-btn" data-period="Q">Q</button>
+              <button class="period-btn" data-period="YTD">YTD</button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="last-updated" id="lastUpdated">
-        Loading...
+        <!-- Documentation Period Controls -->
+        <div id="docControls" class="controls" style="display: none;">
+          <div class="days-back-control">
+            <label>Period:</label>
+            <div class="period-selector">
+              <button class="doc-period-btn active" data-doc-period="mtd">MTD</button>
+              <button class="doc-period-btn" data-doc-period="prev">Prev Mo</button>
+            </div>
+          </div>
+        </div>
+        <!-- Weather Widget -->
+        <div class="header-weather" id="headerWeather">
+          <div class="weather-icon">☀️</div>
+          <div class="weather-info">
+            <div class="weather-temp">--°C</div>
+            <div class="weather-location">Loading...</div>
+          </div>
+        </div>
+        
+        <!-- Clock -->
+        <div class="header-clock" id="headerClock">
+          <div class="clock-time"></div>
+          <div class="clock-date"></div>
+        </div>
       </div>
     </div>
 
@@ -83,7 +99,7 @@
         <!-- Top Guides -->
         <div class="subsection enrollments-chart-col">
           <h3 class="subsection-title">Top Guides</h3>
-          <div id="guidesChart">
+          <div id="guidesChart" class="guides-list">
             <!-- Guide bars will be inserted here -->
           </div>
         </div>
@@ -91,11 +107,11 @@
         <!-- Segments Pie Chart -->
         <div class="subsection enrollments-chart-col">
           <h3 class="subsection-title">Segments</h3>
-          <div class="segments-horizontal">
-            <div class="segments-chart-container-small">
+          <div class="segments-vertical">
+            <div class="segments-pie-container">
               <canvas id="segmentsPieChart"></canvas>
             </div>
-            <div id="segmentsLegend" class="segments-legend-compact">
+            <div id="segmentsLegend" class="segments-legend-horizontal">
               <!-- Legend will be inserted here -->
             </div>
           </div>
@@ -152,7 +168,54 @@
     <!-- End Documentation View -->
   </div>
 
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-content">
+      <div class="last-updated" id="lastUpdated">
+        Loading... <span id="cacheInfo" class="cache-info" title="Click to force refresh from webhook"></span>
+      </div>
+      <button class="settings-btn" id="settingsBtn" title="Settings">⚙️</button>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal" id="settingsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Dashboard Settings</h2>
+        <button class="modal-close" id="closeSettings">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-group">
+          <label class="setting-label">
+            <span>Auto-rotate between tabs:</span>
+            <select id="rotateInterval" class="setting-select">
+              <option value="0">Disabled</option>
+              <option value="30">Every 30 seconds</option>
+              <option value="60">Every 60 seconds</option>
+              <option value="120">Every 2 minutes</option>
+              <option value="300">Every 5 minutes</option>
+            </select>
+          </label>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label">
+            <input type="checkbox" id="showWeather" class="setting-checkbox" checked>
+            <span>Show weather widget</span>
+          </label>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label">
+            <input type="checkbox" id="showClock" class="setting-checkbox" checked>
+            <span>Show clock</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
   <script src="queries.js"></script>
   <script src="api.js"></script>
   <script src="renderer.js"></script>

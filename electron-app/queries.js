@@ -133,7 +133,10 @@ previous_agg AS (
 guides_current AS (
   SELECT
     title,
-    COUNT(*) AS cnt
+    COUNT(*) AS cnt,
+    SUM(IF(is_completed AND pass_status = 'passed', 1, 0)) AS completed_passed,
+    SUM(IF(pass_status = 'in_progress', 1, 0)) AS in_progress,
+    SUM(IF(pass_status = 'not_started', 1, 0)) AS not_started
   FROM current_reg
   GROUP BY title
 ),
@@ -142,11 +145,14 @@ guides_top AS (
   SELECT
     ARRAY_AGG(
       STRUCT(
-        title,
-        cnt AS count,
-        ROUND(cnt * 100.0 / NULLIF(ca.total_enrollments, 0)) AS percent
+        gc.title,
+        gc.cnt AS count,
+        gc.completed_passed,
+        gc.in_progress,
+        gc.not_started,
+        ROUND(gc.cnt * 100.0 / NULLIF(ca.total_enrollments, 0)) AS percent
       )
-      ORDER BY cnt DESC
+      ORDER BY gc.cnt DESC
       LIMIT 6
     ) AS top,
     ANY_VALUE(ca.total_enrollments) AS total_enrollments
@@ -163,6 +169,28 @@ guides_others AS (
       ),
       0
     ) AS others_count,
+    -- Calculate status breakdown for "others"
+    GREATEST(
+      (SELECT completed_passed FROM current_agg) - (
+        SELECT IFNULL(SUM(t.completed_passed), 0)
+        FROM guides_top gt, UNNEST(gt.top) AS t
+      ),
+      0
+    ) AS others_completed_passed,
+    GREATEST(
+      (SELECT in_progress FROM current_agg) - (
+        SELECT IFNULL(SUM(t.in_progress), 0)
+        FROM guides_top gt, UNNEST(gt.top) AS t
+      ),
+      0
+    ) AS others_in_progress,
+    GREATEST(
+      (SELECT not_started FROM current_agg) - (
+        SELECT IFNULL(SUM(t.not_started), 0)
+        FROM guides_top gt, UNNEST(gt.top) AS t
+      ),
+      0
+    ) AS others_not_started,
     CASE
       WHEN ca.total_enrollments > 0 THEN
         100 - (
@@ -331,7 +359,10 @@ SELECT
     STRUCT(
       (SELECT top FROM guides_top) AS top,
       STRUCT(
-        (SELECT others_count   FROM guides_others) AS count,
+        (SELECT others_count FROM guides_others) AS count,
+        (SELECT others_completed_passed FROM guides_others) AS completed_passed,
+        (SELECT others_in_progress FROM guides_others) AS in_progress,
+        (SELECT others_not_started FROM guides_others) AS not_started,
         (SELECT others_percent FROM guides_others) AS percent
       ) AS others
     ) AS guides,
