@@ -1,3 +1,6 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
 // Main process - Electron entry point
 const { app, BrowserWindow, ipcMain, powerSaveBlocker } = require('electron');
 const { autoUpdater } = require('electron-updater');
@@ -89,6 +92,16 @@ app.on('before-quit', () => {
 // IPC handlers for communication between main and renderer
 ipcMain.handle('get-app-version', () => {
   return app.getVersion();
+});
+
+// Get environment variables (securely from main process)
+ipcMain.handle('get-env', (event, key) => {
+  // Only allow specific environment variables
+  const allowedKeys = ['TORQ_WEBHOOK_URL', 'TORQ_AUTH_SECRET', 'USE_MOCK_DATA'];
+  if (allowedKeys.includes(key)) {
+    return process.env[key];
+  }
+  return null;
 });
 
 // Toggle DevTools from renderer (settings)

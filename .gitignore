@@ -92,3 +92,14 @@ iOSInjectionProject/
 ## macOS
 .DS_Store
 
+## Electron
+electron-app/node_modules/
+electron-app/dist/
+
+## Environment Variables
+electron-app/.env
+.env
+
+## IDE
+.vscode/
+.idea/

@@ -1,15 +1,41 @@
 // API client for Torq webhook
 class DashboardAPI {
   constructor() {
-    this.webhookURL = 'https://hooks.torq.io/v1/webhooks/8f17760c-c43f-4270-b465-95dabb54389d/workflows/78f77a59-d2ee-4015-afee-3c8043bb6b31/sync';
-    this.authSecret = 'i9HpRTZLL4sq7AJW1qmpKqZsb85qB1Su9vcyvCayidk';
-    // TESTING ONLY: Set to true to use mock data (includes trend chart data)
+    // Load configuration from environment variables
+    this.webhookURL = null;
+    this.authSecret = null;
     this.useMockData = false;
+    
+    // Initialize config asynchronously
+    this.initPromise = this.initConfig();
+    
     // Smart caching - auto-invalidates when queries change
     this.enableCache = true;
     // Cache TTL: 1 hour (can be cleared manually with Cmd+Shift+R)
     this.cacheExpirationMs = 60 * 60 * 1000;
     this.defaultSegments = ["Torq employees", "Torq App User", "Channel Partner"];
+  }
+
+  async initConfig() {
+    // Load environment variables from main process
+    if (window.electronAPI && window.electronAPI.getEnv) {
+      this.webhookURL = await window.electronAPI.getEnv('TORQ_WEBHOOK_URL');
+      this.authSecret = await window.electronAPI.getEnv('TORQ_AUTH_SECRET');
+      const useMock = await window.electronAPI.getEnv('USE_MOCK_DATA');
+      this.useMockData = useMock === 'true';
+    }
+    
+    // Fallback to defaults if env vars not set (for backward compatibility)
+    if (!this.webhookURL) {
+      console.warn('⚠️  TORQ_WEBHOOK_URL not set in environment variables');
+      this.webhookURL = 'https://hooks.torq.io/v1/webhooks/8f17760c-c43f-4270-b465-95dabb54389d/workflows/78f77a59-d2ee-4015-afee-3c8043bb6b31/sync';
+    }
+    if (!this.authSecret) {
+      console.warn('⚠️  TORQ_AUTH_SECRET not set in environment variables');
+      this.authSecret = 'i9HpRTZLL4sq7AJW1qmpKqZsb85qB1Su9vcyvCayidk';
+    }
+    
+    console.log('✅ API configured with webhook URL:', this.webhookURL ? 'Set' : 'Not set');
   }
 
   // Generate a simple hash for query strings
@@ -153,9 +179,12 @@ class DashboardAPI {
   }
 
   async fetchDashboard(daysBack, docPeriod = 'mtd') {
+    // Wait for config to be loaded
+    await this.initPromise;
+    
     // TESTING ONLY: Use mock data to see trend chart before Torq update
     if (this.useMockData) {
-      console.log('⚠️ USING MOCK DATA (change useMockData to false for production)');
+      console.log('⚠️ USING MOCK DATA (change USE_MOCK_DATA to false for production)');
       return {
         ...this.getMockData(daysBack),
         ...this.getMockDocumentationData()

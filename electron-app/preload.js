@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   toggleDevTools: () => ipcRenderer.invoke('toggle-devtools'),
   isDevToolsOpened: () => ipcRenderer.invoke('is-devtools-opened'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
-  onUpdateStatus: (callback) => ipcRenderer.on('update-status', (event, data) => callback(data))
+  onUpdateStatus: (callback) => ipcRenderer.on('update-status', (event, data) => callback(data)),
+  getEnv: (key) => ipcRenderer.invoke('get-env', key)
 });
 
