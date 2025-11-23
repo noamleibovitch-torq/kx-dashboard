@@ -1,10 +1,10 @@
-// Load environment variables from .env file
-require('dotenv').config();
+// Load environment variables from .env file FIRST (before everything else)
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 // Main process - Electron entry point
 const { app, BrowserWindow, ipcMain, powerSaveBlocker } = require('electron');
 const { autoUpdater } = require('electron-updater');
-const path = require('path');
 
 let mainWindow;
 let powerSaveBlockerId;
@@ -54,18 +54,32 @@ app.whenReady().then(() => {
 
   // Check for updates (only in production)
   if (app.isPackaged) {
-    console.log('🔄 Checking for updates...');
+    console.log('🔄 Initializing auto-updater...');
     
-    // Configure autoUpdater for GitHub releases (public)
-    autoUpdater.setFeedURL({
-      provider: 'github',
-      owner: 'noamleibovitch-torq',
-      repo: 'kx-dashboard'
-    });
+    // Configure autoUpdater for private GitHub releases with token
+    const ghToken = process.env.GH_TOKEN;
     
-    setTimeout(() => {
-      autoUpdater.checkForUpdatesAndNotify();
-    }, 3000); // Check 3 seconds after app starts
+    if (ghToken) {
+      console.log('🔐 Using GitHub token for private releases');
+      console.log('   Token loaded:', ghToken ? 'Yes (length: ' + ghToken.length + ')' : 'No');
+      
+      autoUpdater.setFeedURL({
+        provider: 'github',
+        owner: 'noamleibovitch-torq',
+        repo: 'kx-dashboard',
+        private: true,
+        token: ghToken
+      });
+      
+      setTimeout(() => {
+        console.log('🔍 Checking for updates...');
+        autoUpdater.checkForUpdatesAndNotify();
+      }, 3000); // Check 3 seconds after app starts
+    } else {
+      console.error('❌ GH_TOKEN not found in environment variables!');
+      console.error('   Auto-update will not work without the token.');
+      console.error('   Make sure .env file exists and contains GH_TOKEN');
+    }
   } else {
     console.log('⚠️  Auto-update disabled in development mode');
   }
