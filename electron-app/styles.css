@@ -333,7 +333,7 @@ body {
 }
 
 .section-title {
-  font-size: 20px;  /* Increased from 16px */
+  font-size: 24px;  /* Increased from 20px */
   font-weight: bold;
   margin-bottom: 8px;
   color: #FFFFFF;  /* Added explicit white color */
@@ -351,17 +351,17 @@ body {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 12px 14px;  /* Increased padding for bigger content */
   display: grid;
   grid-template-rows: auto 1fr auto;
-  min-height: 120px;
+  min-height: 160px;  /* Increased from 140px for 56px values */
   gap: 4px;
 }
 
 .kpi-label {
-  font-size: 15px;  /* Increased from 13px */
-  font-weight: 600;  /* Increased from 500 */
-  color: #C0C0C0;  /* Lighter for better contrast */
+  font-size: 18px;  /* Increased from 15px */
+  font-weight: 700;  /* Increased from 600 */
+  color: #FFFFFF;  /* Bright white instead of #E0E0E0 */
   text-transform: uppercase;
   letter-spacing: 1.2px;
   min-height: 32px;
@@ -370,14 +370,14 @@ body {
 }
 
 .kpi-sublabel {
-  font-size: 13px;  /* Increased from 11px */
-  font-weight: 600;  /* Increased from 500 */
+  font-size: 15px;  /* Increased from 13px */
+  font-weight: 700;  /* Increased from 600 */
   color: var(--accent-cyan);
   margin-bottom: 8px;
 }
 
 .kpi-value {
-  font-size: 36px;  /* Increased from 28px */
+  font-size: 56px;  /* Increased from 48px */
   font-weight: bold;
   color: var(--text-primary);
   line-height: 1.2;
@@ -386,7 +386,7 @@ body {
 }
 
 .kpi-value .suffix {
-  font-size: 24px;  /* Increased from 20px */
+  font-size: 36px;  /* Increased from 32px */
   font-weight: 600;
   color: var(--text-secondary);
   margin-left: 4px;
@@ -396,28 +396,30 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;  /* Increased padding */
+  padding: 8px 12px;  /* Increased padding */
   border-radius: 6px;
-  font-size: 15px;  /* Increased from 13px */
-  font-weight: 700;  /* Increased from 600 */
+  font-size: 18px;  /* Increased from 15px */
+  font-weight: 800;  /* Increased from 700 */
 }
 
 .kpi-delta.positive {
-  color: var(--accent-green);
-  background: rgba(0, 255, 136, 0.25);  /* Increased opacity from 0.15 */
-  border: 1px solid rgba(0, 255, 136, 0.4);  /* Added border for contrast */
+  color: #00FFAA;  /* Brighter green */
+  background: rgba(0, 255, 136, 0.2);  /* Darker background - reduced from 0.35 */
+  border: 2px solid rgba(0, 255, 136, 0.8);  /* More opaque border */
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.4);  /* Stronger glow */
 }
 
 .kpi-delta.negative {
-  color: #FF3366;  /* Brighter red - changed from var(--accent-pink) */
-  background: rgba(255, 51, 102, 0.3);  /* Increased opacity and adjusted color */
-  border: 1px solid rgba(255, 51, 102, 0.5);  /* Added border for contrast */
+  color: #FF2255;  /* Brighter red */
+  background: rgba(255, 23, 68, 0.25);  /* Darker background - reduced from 0.4 */
+  border: 2px solid rgba(255, 23, 68, 0.9);  /* More opaque border */
+  box-shadow: 0 0 12px rgba(255, 23, 68, 0.4);  /* Stronger glow */
 }
 
 .kpi-delta .previous-value {
-  font-size: 14px;  /* Increased from 13px */
-  font-weight: 600;
-  opacity: 0.7;  /* Increased from 0.6 for better visibility */
+  font-size: 16px;  /* Increased from 14px */
+  font-weight: 700;  /* Increased from 600 */
+  opacity: 0.9;  /* Increased from 0.8 - brighter */
 }
 
 .kpi-delta span {
@@ -459,8 +461,8 @@ body {
 }
 
 .subsection-title {
-  font-size: 16px;  /* Increased from 13px */
-  font-weight: 700;  /* Increased from 600 */
+  font-size: 18px;  /* Increased from 16px */
+  font-weight: 700;  /* Same as before */
   margin-bottom: 6px;
   color: #E0E0E0;  /* Added lighter color */
 }
@@ -555,21 +557,21 @@ body {
 }
 
 .guide-title {
-  font-size: 16px;  /* Increased from 14px */
-  font-weight: 600;  /* Increased from 500 */
+  font-size: 18px;  /* Increased from 16px */
+  font-weight: 700;  /* Increased from 600 */
   color: var(--text-primary);
 }
 
 .guide-stats {
-  font-size: 14px;  /* Increased from 12px */
+  font-size: 16px;  /* Increased from 14px */
   color: var(--text-secondary);
-  font-weight: 600;  /* Added for better visibility */
+  font-weight: 700;  /* Increased from 600 */
 }
 
 .guide-stats .count {
-  font-weight: 700;  /* Increased from 600 */
+  font-weight: 800;  /* Increased from 700 */
   color: var(--text-primary);
-  font-size: 16px;  /* Added explicit size */
+  font-size: 18px;  /* Increased from 16px */
 }
 
 .guide-bar-container {
@@ -665,16 +667,16 @@ body {
 }
 
 .segment-legend-label {
-  font-size: 15px;  /* Increased from 13px */
-  font-weight: 600;
+  font-size: 17px;  /* Increased from 15px */
+  font-weight: 700;  /* Increased from 600 */
   color: #FFFFFF;
   white-space: nowrap;
   text-shadow: 0 0 4px rgba(255, 255, 255, 0.2);
 }
 
 .segment-legend-value {
-  font-size: 16px;  /* Increased from 13px */
-  font-weight: 700;
+  font-size: 18px;  /* Increased from 16px */
+  font-weight: 800;  /* Increased from 700 */
   white-space: nowrap;
   text-shadow: 0 0 4px currentColor;
 }
