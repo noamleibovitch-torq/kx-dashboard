@@ -34,29 +34,29 @@
 
 /* Light Mode */
 body.light-mode {
-  --bg-primary: #FFFFFF;
-  --bg-secondary: rgba(0, 0, 0, 0.02);
-  --bg-card: rgba(0, 0, 0, 0.03);
-  --border-color: rgba(0, 0, 0, 0.1);
-  --text-primary: #0D0D0D;
-  --text-secondary: #666666;
-  --text-tertiary: #999999;
+  --bg-primary: #F8F9FA;
+  --bg-secondary: rgba(0, 0, 0, 0.05);
+  --bg-card: #FFFFFF;
+  --border-color: rgba(0, 0, 0, 0.15);
+  --text-primary: #1A1A1A;
+  --text-secondary: #4A4A4A;
+  --text-tertiary: #888888;
   --accent-cyan: #0099CC;
   --accent-green: #00AA55;
   --accent-pink: #CC0055;
-  --shadow: rgba(0, 0, 0, 0.1);
+  --shadow: rgba(0, 0, 0, 0.15);
   --view-btn-active-bg: #0D0D0D;
   --view-btn-active-text: #FFFFFF;
-  --negative-text: #CC0055;
-  --negative-bg: rgba(255, 23, 68, 0.08);
-  --negative-border: rgba(255, 23, 68, 0.3);
-  --negative-glow: rgba(255, 23, 68, 0.15);
-  --positive-text: #00AA55;
-  --positive-bg: rgba(0, 255, 136, 0.08);
-  --positive-border: rgba(0, 255, 136, 0.3);
-  --positive-glow: rgba(0, 255, 136, 0.15);
-  --overlay-bg: rgba(255, 255, 255, 0.95);
-  --modal-bg: #F5F5F5;
+  --negative-text: #D32F2F;
+  --negative-bg: rgba(211, 47, 47, 0.1);
+  --negative-border: rgba(211, 47, 47, 0.4);
+  --negative-glow: rgba(211, 47, 47, 0.2);
+  --positive-text: #2E7D32;
+  --positive-bg: rgba(46, 125, 50, 0.1);
+  --positive-border: rgba(46, 125, 50, 0.4);
+  --positive-glow: rgba(46, 125, 50, 0.2);
+  --overlay-bg: rgba(0, 0, 0, 0.5);
+  --modal-bg: #FFFFFF;
 }
 
 body {
