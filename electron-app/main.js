@@ -56,20 +56,12 @@ app.whenReady().then(() => {
   if (app.isPackaged) {
     console.log('🔄 Checking for updates...');
     
-    // Configure autoUpdater for private GitHub releases
-    const ghToken = process.env.GH_TOKEN;
-    if (ghToken) {
-      console.log('🔐 Using GitHub token for private releases');
-      autoUpdater.setFeedURL({
-        provider: 'github',
-        owner: 'noamleibovitch-torq',
-        repo: 'kx-dashboard',
-        private: true,
-        token: ghToken
-      });
-    } else {
-      console.warn('⚠️  GH_TOKEN not set - auto-update may fail for private releases');
-    }
+    // Configure autoUpdater for GitHub releases (public)
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: 'noamleibovitch-torq',
+      repo: 'kx-dashboard'
+    });
     
     setTimeout(() => {
       autoUpdater.checkForUpdatesAndNotify();
