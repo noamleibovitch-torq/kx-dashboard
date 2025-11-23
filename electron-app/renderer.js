@@ -197,9 +197,10 @@ class DashboardApp {
         this.savePeriod();
         this.updatePeriodDisplay();
         
-        // Refresh data from webhook
+        // Refresh data from webhook (background if data exists)
         console.log('Triggering data refresh...');
-        this.load();
+        const hasData = this.data && this.data.enrollments;
+        this.load(!hasData); // Background refresh if we have data
       });
     });
 
@@ -213,9 +214,10 @@ class DashboardApp {
         this.saveDocPeriod();
         this.updateDocPeriodDisplay();
         
-        // Refresh data from webhook
+        // Refresh data from webhook (background if data exists)
         console.log('Triggering documentation data refresh...');
-        this.load();
+        const hasData = this.documentationData && this.documentationData.documentation;
+        this.load(!hasData); // Background refresh if we have data
       });
     });
 
@@ -402,10 +404,19 @@ class DashboardApp {
   }
 
   // Data Loading
-  async load() {
+  async load(isBackgroundRefresh = false) {
     try {
-      // Always show loading indicator
-      this.showLoading(true);
+      // Only show loading indicator on initial load or if we have no data
+      const hasData = this.data && this.data.enrollments && this.documentationData && this.documentationData.documentation;
+      const shouldShowLoading = !isBackgroundRefresh && !hasData;
+      
+      if (shouldShowLoading) {
+        this.showLoading(true);
+        console.log('📊 Initial load - showing loading indicator');
+      } else if (isBackgroundRefresh) {
+        console.log('🔄 Background refresh - silent update');
+      }
+      
       this.hideError();
 
       console.log('Fetching all dashboard data for', this.daysBack, 'days and doc period:', this.docPeriod);
@@ -431,9 +442,19 @@ class DashboardApp {
       
       this.render();
       this.updateLastUpdated();
+      
+      if (isBackgroundRefresh) {
+        console.log('✅ Background refresh complete');
+      }
     } catch (error) {
       console.error('Load error:', error);
-      this.showError(error.message || 'Failed to load data. Will retry in 60 minutes.');
+      // Only show error banner if this isn't a background refresh or if we have no data
+      const hasData = this.data && this.data.enrollments;
+      if (!isBackgroundRefresh || !hasData) {
+        this.showError(error.message || 'Failed to load data. Will retry in 60 minutes.');
+      } else {
+        console.warn('⚠️ Background refresh failed, keeping existing data');
+      }
     } finally {
       this.hideLoading();
     }
@@ -443,8 +464,9 @@ class DashboardApp {
   startAutoRefresh() {
     // Refresh every hour (3600000 ms)
     this.refreshTimer = setInterval(() => {
-      this.load();
+      this.load(true); // Pass true to indicate background refresh
     }, 3600000);
+    console.log('⏰ Auto-refresh enabled: every 60 minutes (background)');
   }
 
   // UI State
