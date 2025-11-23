@@ -3,39 +3,13 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 // Main process - Electron entry point
-const { app, BrowserWindow, ipcMain, powerSaveBlocker, protocol } = require('electron');
+const { app, BrowserWindow, ipcMain, powerSaveBlocker } = require('electron');
 const HotUpdater = require('./hot-update');
-const fs = require('fs');
 
 let mainWindow;
 let powerSaveBlockerId;
 let hotUpdater;
 let updateCheckInterval;
-
-// Register custom protocol for loading hot-updated content
-app.whenReady().then(() => {
-  // Register protocol to handle hot-updated files
-  protocol.registerFileProtocol('app', (request, callback) => {
-    const url = request.url.substr(6); // Remove 'app://' prefix
-    
-    // Map file path
-    let filePath;
-    if (url === '' || url === 'index.html') {
-      filePath = hotUpdater ? hotUpdater.getContentPath('index.html') : path.join(__dirname, 'index.html');
-    } else if (url.startsWith('assets/')) {
-      // Always load assets from bundle
-      filePath = path.join(__dirname, url);
-    } else {
-      // Try hot-updated location first, fallback to bundle
-      filePath = hotUpdater ? hotUpdater.getContentPath(url) : path.join(__dirname, url);
-      if (!fs.existsSync(filePath)) {
-        filePath = path.join(__dirname, url);
-      }
-    }
-    
-    callback({ path: filePath });
-  });
-});
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -53,8 +27,8 @@ function createWindow() {
     }
   });
 
-  // Load index.html using custom protocol (allows hot-updated HTML with bundle assets)
-  mainWindow.loadURL('app://index.html');
+  // Always load index.html from bundle (assets work correctly)
+  mainWindow.loadFile(path.join(__dirname, 'index.html'));
   mainWindow.setFullScreen(true);
 
   // DevTools are now controlled via settings (not auto-opened)

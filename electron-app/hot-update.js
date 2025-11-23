@@ -21,9 +21,8 @@ class HotUpdater {
       console.log('📁 Created content directory:', this.contentDir);
     }
     
-    // Files to update
+    // Files to update (CSS/JS only - HTML stays in bundle for asset paths)
     this.updateableFiles = [
-      'index.html',
       'styles.css',
       'renderer.js',
       'api.js',
