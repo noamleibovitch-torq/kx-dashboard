@@ -54,6 +54,14 @@ body {
   object-fit: contain;
 }
 
+.header-logo-text {
+  font-size: 24px;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin-right: 20px;
+  letter-spacing: 1px;
+}
+
 /* View Switcher */
 .view-switcher {
   display: flex;

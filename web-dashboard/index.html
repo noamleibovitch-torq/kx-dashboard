@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://hooks.torq.io https://wttr.in; font-src 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://wttr.in; font-src 'self'; img-src 'self' data:;">
   <title>KX Dashboard</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -18,7 +18,7 @@
   <div class="app-container">
     <!-- Header -->
     <div class="header">
-      <img src="assets/kx-logo.png" alt="Knowledge Experience Dashboard" class="header-logo">
+      <div class="header-logo-text">KX Dashboard</div>
       
       <!-- View Switcher -->
       <div class="view-switcher">
@@ -80,12 +80,6 @@
   <div class="error-banner" id="errorBanner">
     <span class="icon">⚠️</span>
     <span id="errorMessage"></span>
-  </div>
-
-  <!-- Update Notification -->
-  <div class="update-notification" id="updateNotification" style="display: none;">
-    <span class="icon" id="updateIcon">🔄</span>
-    <span id="updateMessage">Checking for updates...</span>
   </div>
 
     <!-- Academy View -->
@@ -178,9 +172,9 @@
   <div class="footer">
     <div class="footer-content">
       <div class="last-updated" id="lastUpdated">
-        Loading... <span id="cacheInfo" class="cache-info" title="Click to force refresh from webhook"></span>
+        Loading... <span id="cacheInfo" class="cache-info" title="Data refreshed automatically by GitHub Actions"></span>
       </div>
-      <div class="footer-version" id="appVersion">v0.0.0</div>
+      <div class="footer-version" id="appVersion">Web v1.0.0</div>
       <button class="settings-btn" id="settingsBtn" title="Settings">⚙️</button>
     </div>
   </div>
@@ -219,20 +213,13 @@
         </div>
         <div class="setting-group">
           <label class="setting-label">
-            <input type="checkbox" id="showConsole" class="setting-checkbox">
-            <span>Show developer console</span>
-          </label>
-        </div>
-        <div class="setting-group">
-          <label class="setting-label">
-            <span>Check for updates:</span>
-            <select id="updateInterval" class="setting-select">
-              <option value="0">Disabled</option>
-              <option value="1">Every minute</option>
-              <option value="5" selected>Every 5 minutes</option>
+            <span>Auto-refresh data:</span>
+            <select id="dataRefreshInterval" class="setting-select">
+              <option value="0">Manual only</option>
+              <option value="5">Every 5 minutes</option>
               <option value="15">Every 15 minutes</option>
               <option value="30">Every 30 minutes</option>
-              <option value="60">Every hour</option>
+              <option value="60" selected>Every hour</option>
             </select>
           </label>
         </div>
@@ -243,8 +230,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
   <script src="queries.js"></script>
-  <script src="api.js"></script>
-  <script src="renderer.js"></script>
+  <script src="dashboard.js"></script>
 </body>
 </html>
 

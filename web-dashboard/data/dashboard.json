@@ -1,0 +1,146 @@
+{
+  "timestamp": "2025-11-23T14:00:00Z",
+  "enrollments": {
+    "window": {
+      "days_back": 7,
+      "start_date": "2025-11-16",
+      "end_date": "2025-11-23"
+    },
+    "current": {
+      "total_enrollments": 450,
+      "unique_users": 125,
+      "completed_passed": 180,
+      "in_progress": 95
+    },
+    "previous": {
+      "total_enrollments": 380,
+      "unique_users": 105,
+      "completed_passed": 150,
+      "in_progress": 85
+    },
+    "delta": {
+      "total_enrollments": {"abs": 70, "percent": 18.4},
+      "unique_users": {"abs": 20, "percent": 19.0},
+      "completed_passed": {"abs": 30, "percent": 20.0},
+      "in_progress": {"abs": 10, "percent": 11.8}
+    },
+    "guides": {
+      "top": [
+        {
+          "title": "Getting Started with Kubernetes",
+          "count": 85,
+          "percent": 18.9,
+          "completed_passed": 40,
+          "in_progress": 25,
+          "not_started": 20,
+          "segment": "Engineering"
+        },
+        {
+          "title": "Advanced Docker Concepts",
+          "count": 72,
+          "percent": 16.0,
+          "completed_passed": 35,
+          "in_progress": 22,
+          "not_started": 15,
+          "segment": "DevOps"
+        }
+      ],
+      "others": {
+        "count": 293,
+        "percent": 65.1,
+        "completed_passed": 105,
+        "in_progress": 48,
+        "not_started": 140
+      }
+    },
+    "segments": {
+      "current": [
+        {"segment": "Engineering", "count": 180, "percent": 40.0},
+        {"segment": "DevOps", "count": 135, "percent": 30.0},
+        {"segment": "QA", "count": 90, "percent": 20.0},
+        {"segment": "(none)", "count": 45, "percent": 10.0}
+      ]
+    },
+    "trend": [
+      {"date": "2025-11-17", "completed_passed": 25, "in_progress": 12, "not_started": 8},
+      {"date": "2025-11-18", "completed_passed": 28, "in_progress": 15, "not_started": 10},
+      {"date": "2025-11-19", "completed_passed": 30, "in_progress": 14, "not_started": 9},
+      {"date": "2025-11-20", "completed_passed": 32, "in_progress": 16, "not_started": 11},
+      {"date": "2025-11-21", "completed_passed": 27, "in_progress": 13, "not_started": 7},
+      {"date": "2025-11-22", "completed_passed": 20, "in_progress": 12, "not_started": 5},
+      {"date": "2025-11-23", "completed_passed": 18, "in_progress": 13, "not_started": 6}
+    ]
+  },
+  "labs": {
+    "today": {
+      "labs_running_now": 42,
+      "created_labs": 85,
+      "resolved_labs": 76,
+      "total_attempts": 245,
+      "passed_checks_percent": 68.5,
+      "failed_checks_percent": 31.5,
+      "avg_resolve_hours": 2.4
+    },
+    "current": {
+      "avg_resolve_hours": 3.1
+    },
+    "trend": [
+      {"date": "2025-11-17", "created": 78, "resolved": 72},
+      {"date": "2025-11-18", "created": 82, "resolved": 75},
+      {"date": "2025-11-19", "created": 88, "resolved": 80},
+      {"date": "2025-11-20", "created": 90, "resolved": 83},
+      {"date": "2025-11-21", "created": 85, "resolved": 78},
+      {"date": "2025-11-22", "created": 80, "resolved": 74},
+      {"date": "2025-11-23", "created": 85, "resolved": 76}
+    ]
+  },
+  "documentation": {
+    "window": {
+      "month": "November 2025 (MTD)"
+    },
+    "support": {
+      "active_users": 1250,
+      "tickets_amount": 145,
+      "tickets_volume_percent": 11.6,
+      "total_conversations": 890
+    },
+    "support_previous": {
+      "active_users": 1180,
+      "tickets_amount": 162,
+      "tickets_volume_percent": 13.7,
+      "total_conversations": 845
+    },
+    "support_delta": {
+      "active_users": {"absolute": 70, "percent": 5.9},
+      "tickets_amount": {"absolute": -17, "percent": -10.5},
+      "tickets_volume_percent": {"absolute": -2.1, "percent": -15.3},
+      "total_conversations": {"absolute": 45, "percent": 5.3}
+    },
+    "ai_agent": {
+      "adoption_rate_percent": 42.5,
+      "deflection_rate_percent": 68.3
+    },
+    "ai_agent_previous": {
+      "adoption_rate_percent": 38.2,
+      "deflection_rate_percent": 64.1
+    },
+    "ai_agent_delta": {
+      "adoption_rate_percent": {"absolute": 4.3, "percent": 11.3},
+      "deflection_rate_percent": {"absolute": 4.2, "percent": 6.6}
+    },
+    "trend": [
+      {"month": "2025-01", "active_users": 980, "tickets_amount": 178, "tickets_volume_percent": 18.2, "total_conversations": 720},
+      {"month": "2025-02", "active_users": 1050, "tickets_amount": 165, "tickets_volume_percent": 15.7, "total_conversations": 780},
+      {"month": "2025-03", "active_users": 1100, "tickets_amount": 158, "tickets_volume_percent": 14.4, "total_conversations": 810},
+      {"month": "2025-04", "active_users": 1150, "tickets_amount": 152, "tickets_volume_percent": 13.2, "total_conversations": 835},
+      {"month": "2025-05", "active_users": 1180, "tickets_amount": 148, "tickets_volume_percent": 12.5, "total_conversations": 850},
+      {"month": "2025-06", "active_users": 1200, "tickets_amount": 145, "tickets_volume_percent": 12.1, "total_conversations": 865},
+      {"month": "2025-07", "active_users": 1220, "tickets_amount": 142, "tickets_volume_percent": 11.6, "total_conversations": 875},
+      {"month": "2025-08", "active_users": 1235, "tickets_amount": 140, "tickets_volume_percent": 11.3, "total_conversations": 882},
+      {"month": "2025-09", "active_users": 1248, "tickets_amount": 138, "tickets_volume_percent": 11.1, "total_conversations": 888},
+      {"month": "2025-10", "active_users": 1260, "tickets_amount": 136, "tickets_volume_percent": 10.8, "total_conversations": 892},
+      {"month": "2025-11", "active_users": 1250, "tickets_amount": 145, "tickets_volume_percent": 11.6, "total_conversations": 890}
+    ]
+  }
+}
+
