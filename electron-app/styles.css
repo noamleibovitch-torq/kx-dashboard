@@ -333,9 +333,10 @@ body {
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: 20px;  /* Increased from 16px */
   font-weight: bold;
   margin-bottom: 8px;
+  color: #FFFFFF;  /* Added explicit white color */
 }
 
 /* KPI Grid */
@@ -358,9 +359,9 @@ body {
 }
 
 .kpi-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
+  font-size: 15px;  /* Increased from 13px */
+  font-weight: 600;  /* Increased from 500 */
+  color: #C0C0C0;  /* Lighter for better contrast */
   text-transform: uppercase;
   letter-spacing: 1.2px;
   min-height: 32px;
@@ -369,14 +370,14 @@ body {
 }
 
 .kpi-sublabel {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 13px;  /* Increased from 11px */
+  font-weight: 600;  /* Increased from 500 */
   color: var(--accent-cyan);
   margin-bottom: 8px;
 }
 
 .kpi-value {
-  font-size: 28px;
+  font-size: 36px;  /* Increased from 28px */
   font-weight: bold;
   color: var(--text-primary);
   line-height: 1.2;
@@ -385,7 +386,7 @@ body {
 }
 
 .kpi-value .suffix {
-  font-size: 20px;
+  font-size: 24px;  /* Increased from 20px */
   font-weight: 600;
   color: var(--text-secondary);
   margin-left: 4px;
@@ -395,26 +396,28 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 8px;
+  padding: 6px 10px;  /* Increased padding */
   border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 15px;  /* Increased from 13px */
+  font-weight: 700;  /* Increased from 600 */
 }
 
 .kpi-delta.positive {
   color: var(--accent-green);
-  background: rgba(0, 255, 136, 0.15);
+  background: rgba(0, 255, 136, 0.25);  /* Increased opacity from 0.15 */
+  border: 1px solid rgba(0, 255, 136, 0.4);  /* Added border for contrast */
 }
 
 .kpi-delta.negative {
-  color: var(--accent-pink);
-  background: rgba(255, 0, 110, 0.15);
+  color: #FF3366;  /* Brighter red - changed from var(--accent-pink) */
+  background: rgba(255, 51, 102, 0.3);  /* Increased opacity and adjusted color */
+  border: 1px solid rgba(255, 51, 102, 0.5);  /* Added border for contrast */
 }
 
 .kpi-delta .previous-value {
-  font-size: 13px;
+  font-size: 14px;  /* Increased from 13px */
   font-weight: 600;
-  opacity: 0.6;
+  opacity: 0.7;  /* Increased from 0.6 for better visibility */
 }
 
 .kpi-delta span {
@@ -456,9 +459,10 @@ body {
 }
 
 .subsection-title {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 16px;  /* Increased from 13px */
+  font-weight: 700;  /* Increased from 600 */
   margin-bottom: 6px;
+  color: #E0E0E0;  /* Added lighter color */
 }
 
 /* Enrollment Tiles */
@@ -551,19 +555,21 @@ body {
 }
 
 .guide-title {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 16px;  /* Increased from 14px */
+  font-weight: 600;  /* Increased from 500 */
   color: var(--text-primary);
 }
 
 .guide-stats {
-  font-size: 12px;
+  font-size: 14px;  /* Increased from 12px */
   color: var(--text-secondary);
+  font-weight: 600;  /* Added for better visibility */
 }
 
 .guide-stats .count {
-  font-weight: 600;
+  font-weight: 700;  /* Increased from 600 */
   color: var(--text-primary);
+  font-size: 16px;  /* Added explicit size */
 }
 
 .guide-bar-container {
@@ -659,7 +665,7 @@ body {
 }
 
 .segment-legend-label {
-  font-size: 13px;
+  font-size: 15px;  /* Increased from 13px */
   font-weight: 600;
   color: #FFFFFF;
   white-space: nowrap;
@@ -667,7 +673,7 @@ body {
 }
 
 .segment-legend-value {
-  font-size: 13px;
+  font-size: 16px;  /* Increased from 13px */
   font-weight: 700;
   white-space: nowrap;
   text-shadow: 0 0 4px currentColor;
@@ -971,6 +977,13 @@ canvas {
   font-size: 11px;
   color: #808080;
   margin: 0;
+}
+
+.footer-version {
+  font-size: 10px;
+  color: #606060;
+  font-family: 'Monaco', 'Courier New', monospace;
+  opacity: 0.7;
 }
 
 .settings-btn {

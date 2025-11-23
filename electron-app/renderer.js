@@ -63,6 +63,7 @@ class DashboardApp {
     this.updateWidgetVisibility(); // Apply visibility settings
     this.applyConsoleSettings(); // Apply console settings on startup
     this.setupUpdateListeners(); // Listen for auto-update events
+    this.loadAppVersion(); // Display app version in footer
   }
 
   // Persistence
@@ -1973,6 +1974,22 @@ class DashboardApp {
           notification.style.display = 'none';
         }, 5000);
         break;
+    }
+  }
+
+  // Load and display app version
+  async loadAppVersion() {
+    try {
+      if (window.electronAPI && window.electronAPI.getAppVersion) {
+        const version = await window.electronAPI.getAppVersion();
+        const versionElement = document.getElementById('appVersion');
+        if (versionElement) {
+          versionElement.textContent = `v${version}`;
+          console.log('📦 App version:', version);
+        }
+      }
+    } catch (error) {
+      console.warn('Could not load app version:', error);
     }
   }
 }
