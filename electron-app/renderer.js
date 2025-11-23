@@ -20,6 +20,7 @@ class DashboardApp {
     this.rotationInterval = this.loadRotationInterval(); // seconds, 0 = disabled
     this.showWeather = this.loadWeatherToggle();
     this.showClock = this.loadClockToggle();
+    this.showConsole = this.loadConsoleToggle();
     this.trendChart = null;
     this.guidesChart = null; // For top guides stacked bar chart
     this.segmentsPieChart = null;
@@ -60,6 +61,8 @@ class DashboardApp {
     this.loadWeather();
     this.startAutoRotation(); // Start auto-rotation if enabled
     this.updateWidgetVisibility(); // Apply visibility settings
+    this.applyConsoleSettings(); // Apply console settings on startup
+    this.setupUpdateListeners(); // Listen for auto-update events
   }
 
   // Persistence
@@ -126,6 +129,15 @@ class DashboardApp {
 
   saveClockToggle(show) {
     localStorage.setItem('showClock', show.toString());
+  }
+
+  loadConsoleToggle() {
+    const saved = localStorage.getItem('showConsole');
+    return saved === null ? false : saved === 'true'; // Default: false (console hidden)
+  }
+
+  saveConsoleToggle(show) {
+    localStorage.setItem('showConsole', show.toString());
   }
 
   calculateDaysBack(period) {
@@ -237,14 +249,24 @@ class DashboardApp {
     const rotateInterval = document.getElementById('rotateInterval');
     const showWeather = document.getElementById('showWeather');
     const showClock = document.getElementById('showClock');
+    const showConsole = document.getElementById('showConsole');
 
     if (settingsBtn && settingsModal && closeSettings) {
-      settingsBtn.addEventListener('click', () => {
+      settingsBtn.addEventListener('click', async () => {
         settingsModal.classList.add('active');
         // Load current settings into modal
         rotateInterval.value = this.rotationInterval.toString();
         showWeather.checked = this.showWeather;
         showClock.checked = this.showClock;
+        
+        // Load console state from Electron
+        if (window.electronAPI && window.electronAPI.isDevToolsOpened) {
+          const isOpened = await window.electronAPI.isDevToolsOpened();
+          showConsole.checked = isOpened;
+          this.showConsole = isOpened;
+        } else {
+          showConsole.checked = this.showConsole;
+        }
       });
 
       closeSettings.addEventListener('click', () => {
@@ -281,6 +303,18 @@ class DashboardApp {
         this.showClock = e.target.checked;
         this.saveClockToggle(e.target.checked);
         this.updateWidgetVisibility();
+      });
+
+      // Console toggle
+      showConsole.addEventListener('change', async (e) => {
+        console.log('🖥️  Console toggle changed to:', e.target.checked);
+        this.showConsole = e.target.checked;
+        this.saveConsoleToggle(e.target.checked);
+        
+        // Toggle DevTools via IPC
+        if (window.electronAPI && window.electronAPI.toggleDevTools) {
+          await window.electronAPI.toggleDevTools();
+        }
       });
     }
   }
@@ -1821,6 +1855,23 @@ class DashboardApp {
     }
   }
 
+  // Apply console settings on startup
+  async applyConsoleSettings() {
+    const savedConsole = this.loadConsoleToggle();
+    
+    if (window.electronAPI && window.electronAPI.isDevToolsOpened) {
+      const isCurrentlyOpened = await window.electronAPI.isDevToolsOpened();
+      
+      // If saved state doesn't match current state, toggle it
+      if (savedConsole !== isCurrentlyOpened) {
+        if (window.electronAPI.toggleDevTools) {
+          await window.electronAPI.toggleDevTools();
+          console.log('🖥️  Console visibility applied:', savedConsole ? 'visible' : 'hidden');
+        }
+      }
+    }
+  }
+
   // Auto-rotation
   startAutoRotation() {
     // Clear existing timer
@@ -1853,6 +1904,76 @@ class DashboardApp {
     
     // Render the new view
     this.render();
+  }
+
+  // Auto-update listeners
+  setupUpdateListeners() {
+    if (window.electronAPI && window.electronAPI.onUpdateStatus) {
+      window.electronAPI.onUpdateStatus((data) => {
+        this.handleUpdateStatus(data);
+      });
+    }
+  }
+
+  handleUpdateStatus(data) {
+    const notification = document.getElementById('updateNotification');
+    const icon = document.getElementById('updateIcon');
+    const message = document.getElementById('updateMessage');
+
+    if (!notification || !icon || !message) return;
+
+    switch (data.status) {
+      case 'checking':
+        icon.textContent = '🔍';
+        message.textContent = 'Checking for updates...';
+        notification.style.display = 'flex';
+        notification.classList.remove('downloaded');
+        setTimeout(() => {
+          notification.style.display = 'none';
+        }, 3000);
+        break;
+
+      case 'available':
+        icon.textContent = '📥';
+        message.textContent = `Update available (v${data.version}). Downloading...`;
+        notification.style.display = 'flex';
+        notification.classList.remove('downloaded');
+        break;
+
+      case 'not-available':
+        icon.textContent = '✅';
+        message.textContent = 'App is up to date!';
+        notification.style.display = 'flex';
+        notification.classList.remove('downloaded');
+        setTimeout(() => {
+          notification.style.display = 'none';
+        }, 3000);
+        break;
+
+      case 'downloading':
+        icon.textContent = '⬇️';
+        message.textContent = `Downloading update... ${data.percent}%`;
+        notification.style.display = 'flex';
+        notification.classList.remove('downloaded');
+        break;
+
+      case 'downloaded':
+        icon.textContent = '✅';
+        message.textContent = `Update downloaded! Installing in 5 seconds...`;
+        notification.style.display = 'flex';
+        notification.classList.add('downloaded');
+        break;
+
+      case 'error':
+        icon.textContent = '⚠️';
+        message.textContent = `Update error: ${data.error}`;
+        notification.style.display = 'flex';
+        notification.classList.remove('downloaded');
+        setTimeout(() => {
+          notification.style.display = 'none';
+        }, 5000);
+        break;
+    }
   }
 }
 

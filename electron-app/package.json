@@ -22,11 +22,19 @@
     "electron-builder": "^24.9.1"
   },
   "dependencies": {
-    "chart.js": "^4.4.1"
+    "chart.js": "^4.4.1",
+    "electron-updater": "^6.6.2"
   },
   "build": {
     "appId": "com.kx.dashboard",
     "productName": "KX Dashboard",
+    "publish": {
+      "provider": "github",
+      "owner": "noamleibovitch",
+      "repo": "KX-Dashboard",
+      "private": false,
+      "releaseType": "release"
+    },
     "mac": {
       "category": "public.app-category.business",
       "target": [
@@ -55,6 +63,9 @@
       "styles.css",
       "assets/**/*"
     ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noamleibovitch/KX-Dashboard.git"
   }
 }
-

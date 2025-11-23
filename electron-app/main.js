@@ -1,5 +1,6 @@
 // Main process - Electron entry point
 const { app, BrowserWindow, ipcMain, powerSaveBlocker } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 
 let mainWindow;
@@ -24,9 +25,8 @@ function createWindow() {
   mainWindow.loadFile('index.html');
   mainWindow.setFullScreen(true);
 
-  // Always open DevTools for debugging
-  mainWindow.webContents.openDevTools();
-
+  // DevTools are now controlled via settings (not auto-opened)
+  
   // Add keyboard shortcut to toggle DevTools (Cmd+Option+I)
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (input.key === 'i' && input.meta && input.alt) {
@@ -48,6 +48,16 @@ app.whenReady().then(() => {
   console.log('🔋 Power save blocker started - screen will stay awake');
   console.log('   Blocker ID:', powerSaveBlockerId);
   console.log('   Is blocking:', powerSaveBlocker.isStarted(powerSaveBlockerId));
+
+  // Check for updates (only in production)
+  if (app.isPackaged) {
+    console.log('🔄 Checking for updates...');
+    setTimeout(() => {
+      autoUpdater.checkForUpdatesAndNotify();
+    }, 3000); // Check 3 seconds after app starts
+  } else {
+    console.log('⚠️  Auto-update disabled in development mode');
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -81,3 +91,98 @@ ipcMain.handle('get-app-version', () => {
   return app.getVersion();
 });
 
+// Toggle DevTools from renderer (settings)
+ipcMain.handle('toggle-devtools', () => {
+  if (mainWindow) {
+    if (mainWindow.webContents.isDevToolsOpened()) {
+      mainWindow.webContents.closeDevTools();
+    } else {
+      mainWindow.webContents.openDevTools();
+    }
+    return mainWindow.webContents.isDevToolsOpened();
+  }
+  return false;
+});
+
+// Get DevTools state
+ipcMain.handle('is-devtools-opened', () => {
+  if (mainWindow) {
+    return mainWindow.webContents.isDevToolsOpened();
+  }
+  return false;
+});
+
+// Auto-updater event handlers
+autoUpdater.on('checking-for-update', () => {
+  console.log('🔍 Checking for update...');
+  if (mainWindow) {
+    mainWindow.webContents.send('update-status', { status: 'checking' });
+  }
+});
+
+autoUpdater.on('update-available', (info) => {
+  console.log('✅ Update available:', info.version);
+  if (mainWindow) {
+    mainWindow.webContents.send('update-status', { 
+      status: 'available', 
+      version: info.version 
+    });
+  }
+});
+
+autoUpdater.on('update-not-available', (info) => {
+  console.log('✅ App is up to date:', info.version);
+  if (mainWindow) {
+    mainWindow.webContents.send('update-status', { 
+      status: 'not-available',
+      version: info.version 
+    });
+  }
+});
+
+autoUpdater.on('error', (err) => {
+  console.error('❌ Update error:', err);
+  if (mainWindow) {
+    mainWindow.webContents.send('update-status', { 
+      status: 'error',
+      error: err.message 
+    });
+  }
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+  const message = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent}%`;
+  console.log('📥', message);
+  if (mainWindow) {
+    mainWindow.webContents.send('update-status', { 
+      status: 'downloading',
+      percent: Math.round(progressObj.percent),
+      transferred: progressObj.transferred,
+      total: progressObj.total
+    });
+  }
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  console.log('✅ Update downloaded:', info.version);
+  if (mainWindow) {
+    mainWindow.webContents.send('update-status', { 
+      status: 'downloaded',
+      version: info.version 
+    });
+  }
+  // Auto-install after 5 seconds
+  setTimeout(() => {
+    console.log('🔄 Installing update and restarting...');
+    autoUpdater.quitAndInstall();
+  }, 5000);
+});
+
+// Manual update check
+ipcMain.handle('check-for-updates', () => {
+  if (app.isPackaged) {
+    autoUpdater.checkForUpdatesAndNotify();
+    return { status: 'checking' };
+  }
+  return { status: 'dev-mode' };
+});
