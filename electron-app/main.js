@@ -4,10 +4,12 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 // Main process - Electron entry point
 const { app, BrowserWindow, ipcMain, powerSaveBlocker } = require('electron');
-const { autoUpdater } = require('electron-updater');
+const HotUpdater = require('./hot-update');
 
 let mainWindow;
 let powerSaveBlockerId;
+let hotUpdater;
+let updateCheckInterval;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -52,36 +54,22 @@ app.whenReady().then(() => {
   console.log('   Blocker ID:', powerSaveBlockerId);
   console.log('   Is blocking:', powerSaveBlocker.isStarted(powerSaveBlockerId));
 
-  // Check for updates (only in production)
+  // Initialize hot updater (only in production)
   if (app.isPackaged) {
-    console.log('🔄 Initializing auto-updater...');
+    hotUpdater = new HotUpdater();
     
-    // Configure autoUpdater for private GitHub releases with token
-    const ghToken = process.env.GH_TOKEN;
+    // Initial check after 5 seconds
+    setTimeout(() => {
+      checkForHotUpdates();
+    }, 5000);
     
-    if (ghToken) {
-      console.log('🔐 Using GitHub token for private releases');
-      console.log('   Token loaded:', ghToken ? 'Yes (length: ' + ghToken.length + ')' : 'No');
-      
-      autoUpdater.setFeedURL({
-        provider: 'github',
-        owner: 'noamleibovitch-torq',
-        repo: 'kx-dashboard',
-        private: true,
-        token: ghToken
-      });
-      
-      setTimeout(() => {
-        console.log('🔍 Checking for updates...');
-        autoUpdater.checkForUpdatesAndNotify();
-      }, 3000); // Check 3 seconds after app starts
-    } else {
-      console.error('❌ GH_TOKEN not found in environment variables!');
-      console.error('   Auto-update will not work without the token.');
-      console.error('   Make sure .env file exists and contains GH_TOKEN');
-    }
+    // Set up periodic checks (default: 5 minutes, configurable)
+    const updateInterval = 5 * 60 * 1000; // 5 minutes
+    updateCheckInterval = setInterval(() => {
+      checkForHotUpdates();
+    }, updateInterval);
   } else {
-    console.log('⚠️  Auto-update disabled in development mode');
+    console.log('⚠️  Hot updates disabled in development mode');
   }
 
   app.on('activate', () => {
@@ -147,77 +135,84 @@ ipcMain.handle('is-devtools-opened', () => {
   return false;
 });
 
-// Auto-updater event handlers
-autoUpdater.on('checking-for-update', () => {
-  console.log('🔍 Checking for update...');
-  if (mainWindow) {
-    mainWindow.webContents.send('update-status', { status: 'checking' });
+// Hot update function
+async function checkForHotUpdates() {
+  if (!hotUpdater) return;
+  
+  try {
+    const updateInfo = await hotUpdater.checkForUpdates();
+    
+    if (updateInfo.available) {
+      console.log('🎉 Hot update available:', updateInfo.latestVersion);
+      
+      if (mainWindow) {
+        mainWindow.webContents.send('update-status', {
+          status: 'available',
+          type: 'hot',
+          currentVersion: updateInfo.currentVersion,
+          latestVersion: updateInfo.latestVersion
+        });
+      }
+      
+      // Auto-download and apply
+      console.log('📥 Downloading hot update...');
+      const downloadResults = await hotUpdater.downloadUpdates();
+      
+      console.log('🔄 Applying hot update...');
+      await hotUpdater.applyUpdates(downloadResults);
+      
+      if (mainWindow) {
+        mainWindow.webContents.send('update-status', {
+          status: 'applied',
+          type: 'hot',
+          version: updateInfo.latestVersion
+        });
+        
+        // Reload window to apply changes
+        setTimeout(() => {
+          console.log('🔃 Reloading window...');
+          mainWindow.reload();
+        }, 2000);
+      }
+    } else if (updateInfo.error) {
+      console.error('❌ Hot update check failed:', updateInfo.error);
+    }
+  } catch (error) {
+    console.error('❌ Hot update error:', error);
+    if (mainWindow) {
+      mainWindow.webContents.send('update-status', {
+        status: 'error',
+        type: 'hot',
+        error: error.message
+      });
+    }
   }
-});
+}
 
-autoUpdater.on('update-available', (info) => {
-  console.log('✅ Update available:', info.version);
-  if (mainWindow) {
-    mainWindow.webContents.send('update-status', { 
-      status: 'available', 
-      version: info.version 
-    });
-  }
-});
-
-autoUpdater.on('update-not-available', (info) => {
-  console.log('✅ App is up to date:', info.version);
-  if (mainWindow) {
-    mainWindow.webContents.send('update-status', { 
-      status: 'not-available',
-      version: info.version 
-    });
-  }
-});
-
-autoUpdater.on('error', (err) => {
-  console.error('❌ Update error:', err);
-  if (mainWindow) {
-    mainWindow.webContents.send('update-status', { 
-      status: 'error',
-      error: err.message 
-    });
-  }
-});
-
-autoUpdater.on('download-progress', (progressObj) => {
-  const message = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent}%`;
-  console.log('📥', message);
-  if (mainWindow) {
-    mainWindow.webContents.send('update-status', { 
-      status: 'downloading',
-      percent: Math.round(progressObj.percent),
-      transferred: progressObj.transferred,
-      total: progressObj.total
-    });
-  }
-});
-
-autoUpdater.on('update-downloaded', (info) => {
-  console.log('✅ Update downloaded:', info.version);
-  if (mainWindow) {
-    mainWindow.webContents.send('update-status', { 
-      status: 'downloaded',
-      version: info.version 
-    });
-  }
-  // Auto-install after 5 seconds
-  setTimeout(() => {
-    console.log('🔄 Installing update and restarting...');
-    autoUpdater.quitAndInstall();
-  }, 5000);
-});
-
-// Manual update check
-ipcMain.handle('check-for-updates', () => {
-  if (app.isPackaged) {
-    autoUpdater.checkForUpdatesAndNotify();
-    return { status: 'checking' };
+// Manual hot update check
+ipcMain.handle('check-for-updates', async () => {
+  if (app.isPackaged && hotUpdater) {
+    await checkForHotUpdates();
+    return { status: 'checking', type: 'hot' };
   }
   return { status: 'dev-mode' };
+});
+
+// Configure update check interval
+ipcMain.handle('set-update-interval', (event, minutes) => {
+  if (updateCheckInterval) {
+    clearInterval(updateCheckInterval);
+  }
+  
+  if (minutes > 0) {
+    const interval = minutes * 60 * 1000;
+    updateCheckInterval = setInterval(() => {
+      checkForHotUpdates();
+    }, interval);
+    console.log(`⏰ Update check interval set to ${minutes} minutes`);
+    return { success: true, interval: minutes };
+  } else {
+    console.log('⏰ Update check disabled');
+    return { success: true, interval: 0 };
+  }
 });

@@ -318,6 +318,30 @@ class DashboardApp {
         }
       });
     }
+
+    // Update interval setting
+    const updateInterval = document.getElementById('updateInterval');
+    if (updateInterval) {
+      // Load saved interval
+      const savedInterval = localStorage.getItem('updateInterval');
+      if (savedInterval !== null) {
+        updateInterval.value = savedInterval;
+      }
+
+      updateInterval.addEventListener('change', async (e) => {
+        const minutes = parseInt(e.target.value, 10);
+        console.log('⏰ Update interval changed to:', minutes, 'minutes');
+        
+        // Save to localStorage
+        localStorage.setItem('updateInterval', minutes.toString());
+        
+        // Update via IPC
+        if (window.electronAPI && window.electronAPI.setUpdateInterval) {
+          const result = await window.electronAPI.setUpdateInterval(minutes);
+          console.log('   Update interval set:', result);
+        }
+      });
+    }
   }
 
   updatePeriodDisplay() {
@@ -1932,10 +1956,12 @@ class DashboardApp {
 
     if (!notification || !icon || !message) return;
 
+    const isHotUpdate = data.type === 'hot';
+
     switch (data.status) {
       case 'checking':
         icon.textContent = '🔍';
-        message.textContent = 'Checking for updates...';
+        message.textContent = isHotUpdate ? 'Checking for content updates...' : 'Checking for updates...';
         notification.style.display = 'flex';
         notification.classList.remove('downloaded');
         setTimeout(() => {
@@ -1945,9 +1971,18 @@ class DashboardApp {
 
       case 'available':
         icon.textContent = '📥';
-        message.textContent = `Update available (v${data.version}). Downloading...`;
+        message.textContent = isHotUpdate 
+          ? `Hot update available (v${data.latestVersion}). Downloading...`
+          : `Update available (v${data.version}). Downloading...`;
         notification.style.display = 'flex';
         notification.classList.remove('downloaded');
+        break;
+
+      case 'applied':
+        icon.textContent = '🔄';
+        message.textContent = `Update applied (v${data.version})! Reloading...`;
+        notification.style.display = 'flex';
+        notification.classList.add('downloaded');
         break;
 
       case 'not-available':
