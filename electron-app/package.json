@@ -31,8 +31,8 @@
     "productName": "KX Dashboard",
     "publish": {
       "provider": "github",
-      "owner": "noamleibovitch",
-      "repo": "KX-Dashboard",
+      "owner": "noamleibovitch-torq",
+      "repo": "kx-dashboard",
       "private": true,
       "releaseType": "release"
     },
