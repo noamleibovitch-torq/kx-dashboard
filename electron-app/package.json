@@ -60,9 +60,12 @@
       "renderer.js",
       "api.js",
       "queries.js",
+      "hot-update.js",
       "index.html",
       "styles.css",
       "assets/**/*",
+      "sql/**/*",
+      "jq/**/*",
       ".env"
     ]
   },
