@@ -403,14 +403,14 @@ body {
 }
 
 .kpi-delta.positive {
-  color: #00FFAA;  /* Brighter green */
+  color: #E0FFE0;  /* Much lighter green - almost white with green tint */
   background: rgba(0, 255, 136, 0.2);  /* Darker background - reduced from 0.35 */
   border: 2px solid rgba(0, 255, 136, 0.8);  /* More opaque border */
   box-shadow: 0 0 12px rgba(0, 255, 136, 0.4);  /* Stronger glow */
 }
 
 .kpi-delta.negative {
-  color: #FF2255;  /* Brighter red */
+  color: #FFE0E0;  /* Much lighter red - almost white with red tint */
   background: rgba(255, 23, 68, 0.25);  /* Darker background - reduced from 0.4 */
   border: 2px solid rgba(255, 23, 68, 0.9);  /* More opaque border */
   box-shadow: 0 0 12px rgba(255, 23, 68, 0.4);  /* Stronger glow */
