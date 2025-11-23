@@ -84,15 +84,17 @@ The app shows visual notifications for:
 
 ### Repository Settings
 
-Your GitHub Personal Access Token: `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`
+Your GitHub Personal Access Token: `[REDACTED - Stored securely]`
 
-**Used for:**
-- GitHub Actions to create releases
-- Stored as repository secret (optional, GITHUB_TOKEN works automatically)
+**Token Usage:**
+- GitHub Actions uses built-in GITHUB_TOKEN automatically
+- Your PAT is NOT needed in the repository or code
+- Keep your PAT secure and private
 
-**Security:**
-- Token has `repo` scope
-- Can be revoked anytime at: GitHub → Settings → Developer Settings → Tokens
+**If you need to use the token:**
+- Set as environment variable on your local machine
+- Add to GitHub repository secrets (Settings → Secrets)
+- NEVER commit tokens to the repository
 
 ## Creating a New Release
 
