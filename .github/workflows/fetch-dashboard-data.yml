@@ -49,13 +49,13 @@ jobs:
           
           # Add timestamp to the data
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          echo "${ACADEMY_DATA}" | jq --arg ts "${TIMESTAMP}" '. + {timestamp: $ts}' > web-dashboard/data/dashboard.json
+          echo "${ACADEMY_DATA}" | jq --arg ts "${TIMESTAMP}" '. + {timestamp: $ts}' > docs/data/dashboard.json
           
           echo "✅ Dashboard data updated successfully"
       
       - name: Commit and push if changed
         run: |
-          cd web-dashboard
+          cd docs
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add data/dashboard.json
