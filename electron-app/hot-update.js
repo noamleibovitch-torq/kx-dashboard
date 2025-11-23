@@ -10,7 +10,7 @@ class HotUpdater {
     this.githubToken = process.env.GH_TOKEN;
     this.owner = 'noamleibovitch-torq';
     this.repo = 'kx-dashboard';
-    this.branch = 'feature/remote-updates';
+    this.branch = 'main'; // Changed from 'feature/remote-updates' to 'main'
     
     // Use Application Support directory (writable) instead of app bundle (read-only)
     this.contentDir = path.join(app.getPath('userData'), 'content');
@@ -28,6 +28,8 @@ class HotUpdater {
       'renderer.js',
       'api.js',
       'queries.js',
+      'hot-update.js',
+      'assets/kx-logo.png',
       'sql/documentation_dashboard.sql',
       'sql/enrollments_dashboard.sql',
       'sql/enrollments_raw.sql',
@@ -69,6 +71,7 @@ class HotUpdater {
   async checkForUpdates() {
     try {
       console.log('🔍 Checking for content updates...');
+      console.log(`   Repository: ${this.owner}/${this.repo} (${this.branch})`);
       
       // Check if we have a version file in writable location
       const versionPath = path.join(this.contentDir, 'version.json');
@@ -78,10 +81,14 @@ class HotUpdater {
         const versionData = JSON.parse(fs.readFileSync(versionPath, 'utf8'));
         currentVersion = versionData.version;
         this.currentVersion = currentVersion;
+        console.log(`   Using version from cache: ${currentVersion}`);
+      } else {
+        console.log(`   Using version from bundle: ${currentVersion}`);
       }
       
       // Get latest package.json from GitHub
-      const packageJson = await this.fetchFile('package.json');
+      console.log(`   Fetching: electron-app/package.json from ${this.branch}`);
+      const packageJson = await this.fetchFile('electron-app/package.json');
       const latestVersion = JSON.parse(packageJson).version;
       
       console.log(`   Current: ${currentVersion} | Latest: ${latestVersion}`);
@@ -99,6 +106,7 @@ class HotUpdater {
       }
     } catch (error) {
       console.error('❌ Error checking for updates:', error.message);
+      console.error('   Stack:', error.stack);
       return { available: false, error: error.message };
     }
   }
