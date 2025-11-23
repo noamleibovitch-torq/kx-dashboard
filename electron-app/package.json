@@ -1,6 +1,6 @@
 {
   "name": "kx-dashboard",
-  "version": "1.2.7",
+  "version": "1.2.8",
   "description": "KX Dashboard - Native macOS Electron App for Torq Analytics",
   "main": "main.js",
   "scripts": {
