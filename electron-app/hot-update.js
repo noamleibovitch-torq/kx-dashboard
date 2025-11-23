@@ -21,15 +21,13 @@ class HotUpdater {
       console.log('📁 Created content directory:', this.contentDir);
     }
     
-    // Files to update
+    // Files to update (exclude index.html to preserve asset paths)
     this.updateableFiles = [
-      'index.html',
       'styles.css',
       'renderer.js',
       'api.js',
       'queries.js',
       'hot-update.js',
-      'assets/kx-logo.png',
       'sql/documentation_dashboard.sql',
       'sql/enrollments_dashboard.sql',
       'sql/enrollments_raw.sql',
