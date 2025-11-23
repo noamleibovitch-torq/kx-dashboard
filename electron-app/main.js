@@ -62,8 +62,8 @@ app.whenReady().then(() => {
       console.log('🔐 Using GitHub token for private releases');
       autoUpdater.setFeedURL({
         provider: 'github',
-        owner: 'noamleibovitch',
-        repo: 'KX-Dashboard',
+        owner: 'noamleibovitch-torq',
+        repo: 'kx-dashboard',
         private: true,
         token: ghToken
       });
