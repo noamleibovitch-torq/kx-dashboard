@@ -48,8 +48,12 @@ function createWindow() {
 
 // App lifecycle
 app.whenReady().then(() => {
-  // Initialize hot updater (only in production)
-  if (app.isPackaged) {
+  // Initialize hot updater (always, not just in production)
+  console.log('🔧 App initialization starting...');
+  console.log('   isPackaged:', app.isPackaged);
+  console.log('   app path:', app.getAppPath());
+  
+  try {
     hotUpdater = new HotUpdater();
     
     // Initialize content (copy from bundle to writable location if first run)
@@ -67,8 +71,10 @@ app.whenReady().then(() => {
     updateCheckInterval = setInterval(() => {
       checkForHotUpdates();
     }, updateInterval);
-  } else {
-    console.log('⚠️  Hot updates disabled in development mode');
+    
+    console.log('✅ Hot update system enabled');
+  } catch (error) {
+    console.error('❌ Failed to initialize hot updater:', error);
   }
   
   createWindow();
@@ -206,11 +212,13 @@ async function checkForHotUpdates() {
 
 // Manual hot update check
 ipcMain.handle('check-for-updates', async () => {
-  if (app.isPackaged && hotUpdater) {
+  if (hotUpdater) {
+    console.log('🔄 Manual update check requested');
     await checkForHotUpdates();
     return { status: 'checking', type: 'hot' };
   }
-  return { status: 'dev-mode' };
+  console.warn('⚠️  Hot updater not initialized');
+  return { status: 'not-available' };
 });
 
 // Configure update check interval
