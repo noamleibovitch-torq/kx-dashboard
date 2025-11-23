@@ -2,6 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const { app } = require('electron');
 
 class HotUpdater {
   constructor() {
@@ -10,6 +11,15 @@ class HotUpdater {
     this.owner = 'noamleibovitch-torq';
     this.repo = 'kx-dashboard';
     this.branch = 'feature/remote-updates';
+    
+    // Use Application Support directory (writable) instead of app bundle (read-only)
+    this.contentDir = path.join(app.getPath('userData'), 'content');
+    
+    // Ensure content directory exists
+    if (!fs.existsSync(this.contentDir)) {
+      fs.mkdirSync(this.contentDir, { recursive: true });
+      console.log('📁 Created content directory:', this.contentDir);
+    }
     
     // Files to update
     this.updateableFiles = [
@@ -25,22 +35,62 @@ class HotUpdater {
       'jq/labs_transform.jq'
     ];
   }
+  
+  // Get the path for a content file (writable location or app bundle fallback)
+  getContentPath(file) {
+    const writablePath = path.join(this.contentDir, file);
+    const bundlePath = path.join(__dirname, file);
+    
+    // If writable version exists, use it; otherwise use bundle version
+    return fs.existsSync(writablePath) ? writablePath : bundlePath;
+  }
+  
+  // Copy initial files from bundle to writable location if they don't exist
+  initializeContent() {
+    for (const file of this.updateableFiles) {
+      const writablePath = path.join(this.contentDir, file);
+      const bundlePath = path.join(__dirname, file);
+      
+      // Skip if already exists in writable location
+      if (fs.existsSync(writablePath)) continue;
+      
+      // Copy from bundle to writable location
+      if (fs.existsSync(bundlePath)) {
+        const dir = path.dirname(writablePath);
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+        fs.copyFileSync(bundlePath, writablePath);
+        console.log(`📋 Initialized ${file} to writable location`);
+      }
+    }
+  }
 
   async checkForUpdates() {
     try {
       console.log('🔍 Checking for content updates...');
       
+      // Check if we have a version file in writable location
+      const versionPath = path.join(this.contentDir, 'version.json');
+      let currentVersion = this.currentVersion;
+      
+      if (fs.existsSync(versionPath)) {
+        const versionData = JSON.parse(fs.readFileSync(versionPath, 'utf8'));
+        currentVersion = versionData.version;
+        this.currentVersion = currentVersion;
+      }
+      
       // Get latest package.json from GitHub
       const packageJson = await this.fetchFile('package.json');
       const latestVersion = JSON.parse(packageJson).version;
       
-      console.log(`   Current: ${this.currentVersion} | Latest: ${latestVersion}`);
+      console.log(`   Current: ${currentVersion} | Latest: ${latestVersion}`);
       
-      if (this.isNewerVersion(latestVersion, this.currentVersion)) {
+      if (this.isNewerVersion(latestVersion, currentVersion)) {
         console.log('✨ New version available:', latestVersion);
         return {
           available: true,
-          currentVersion: this.currentVersion,
+          currentVersion: currentVersion,
           latestVersion: latestVersion
         };
       } else {
@@ -55,7 +105,7 @@ class HotUpdater {
 
   async downloadUpdates() {
     try {
-      console.log('📥 Downloading updates...');
+      console.log('📥 Downloading updates to writable location...');
       const results = [];
       
       for (const file of this.updateableFiles) {
@@ -63,17 +113,20 @@ class HotUpdater {
           console.log(`   Downloading ${file}...`);
           const content = await this.fetchFile(`electron-app/${file}`);
           
-          // Save to temp location first
-          const tempPath = path.join(__dirname, `.${file}.tmp`);
-          const targetPath = path.join(__dirname, file);
+          // Save directly to writable location
+          const targetPath = path.join(this.contentDir, file);
+          const tempPath = targetPath + '.tmp';
           
           // Ensure directory exists
-          const dir = path.dirname(tempPath);
+          const dir = path.dirname(targetPath);
           if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
           }
           
+          // Write to temp file first, then rename (atomic operation)
           fs.writeFileSync(tempPath, content, 'utf8');
+          fs.renameSync(tempPath, targetPath);
+          
           results.push({ file, success: true });
           console.log(`   ✓ ${file}`);
         } catch (error) {
@@ -93,27 +146,16 @@ class HotUpdater {
     try {
       console.log('🔄 Applying updates...');
       
-      // Move temp files to actual locations
-      for (const result of downloadResults) {
-        if (result.success) {
-          const tempPath = path.join(__dirname, `.${result.file}.tmp`);
-          const targetPath = path.join(__dirname, result.file);
-          
-          if (fs.existsSync(tempPath)) {
-            fs.renameSync(tempPath, targetPath);
-            console.log(`   ✓ Applied ${result.file}`);
-          }
-        }
-      }
-      
-      // Update version in local package.json
-      const packagePath = path.join(__dirname, 'package.json');
-      const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+      // Update version in writable location
+      const versionPath = path.join(this.contentDir, 'version.json');
       const latestPackage = JSON.parse(await this.fetchFile('electron-app/package.json'));
-      packageJson.version = latestPackage.version;
-      fs.writeFileSync(packagePath, JSON.stringify(packageJson, null, 2));
+      fs.writeFileSync(versionPath, JSON.stringify({ version: latestPackage.version }, null, 2));
       
-      console.log('✅ Updates applied successfully');
+      // Update current version tracker
+      this.currentVersion = latestPackage.version;
+      
+      console.log('✅ Updates applied successfully - files are now in writable location');
+      console.log('   Content directory:', this.contentDir);
       return true;
     } catch (error) {
       console.error('❌ Error applying updates:', error.message);
@@ -158,9 +200,9 @@ class HotUpdater {
   }
 
   cleanup() {
-    // Remove any leftover temp files
+    // Remove any leftover temp files from writable location
     this.updateableFiles.forEach(file => {
-      const tempPath = path.join(__dirname, `.${file}.tmp`);
+      const tempPath = path.join(this.contentDir, file + '.tmp');
       if (fs.existsSync(tempPath)) {
         fs.unlinkSync(tempPath);
       }

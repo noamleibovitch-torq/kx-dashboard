@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   setUpdateInterval: (minutes) => ipcRenderer.invoke('set-update-interval', minutes),
   onUpdateStatus: (callback) => ipcRenderer.on('update-status', (event, data) => callback(data)),
-  getEnv: (key) => ipcRenderer.invoke('get-env', key)
+  getEnv: (key) => ipcRenderer.invoke('get-env', key),
+  getContentPath: (filename) => ipcRenderer.invoke('get-content-path', filename)
 });
 

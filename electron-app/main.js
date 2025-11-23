@@ -27,7 +27,9 @@ function createWindow() {
     }
   });
 
-  mainWindow.loadFile('index.html');
+  // Load index.html from writable location if it exists (hot-updated), otherwise from bundle
+  const indexPath = hotUpdater ? hotUpdater.getContentPath('index.html') : path.join(__dirname, 'index.html');
+  mainWindow.loadFile(indexPath);
   mainWindow.setFullScreen(true);
 
   // DevTools are now controlled via settings (not auto-opened)
@@ -46,17 +48,14 @@ function createWindow() {
 
 // App lifecycle
 app.whenReady().then(() => {
-  createWindow();
-
-  // Prevent display from sleeping (keep dashboard visible)
-  powerSaveBlockerId = powerSaveBlocker.start('prevent-display-sleep');
-  console.log('🔋 Power save blocker started - screen will stay awake');
-  console.log('   Blocker ID:', powerSaveBlockerId);
-  console.log('   Is blocking:', powerSaveBlocker.isStarted(powerSaveBlockerId));
-
   // Initialize hot updater (only in production)
   if (app.isPackaged) {
     hotUpdater = new HotUpdater();
+    
+    // Initialize content (copy from bundle to writable location if first run)
+    hotUpdater.initializeContent();
+    console.log('✅ Hot updater initialized with writable content directory');
+    console.log('   Content location:', hotUpdater.contentDir);
     
     // Initial check after 5 seconds
     setTimeout(() => {
@@ -71,6 +70,14 @@ app.whenReady().then(() => {
   } else {
     console.log('⚠️  Hot updates disabled in development mode');
   }
+  
+  createWindow();
+
+  // Prevent display from sleeping (keep dashboard visible)
+  powerSaveBlockerId = powerSaveBlocker.start('prevent-display-sleep');
+  console.log('🔋 Power save blocker started - screen will stay awake');
+  console.log('   Blocker ID:', powerSaveBlockerId);
+  console.log('   Is blocking:', powerSaveBlocker.isStarted(powerSaveBlockerId));
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -133,6 +140,14 @@ ipcMain.handle('is-devtools-opened', () => {
     return mainWindow.webContents.isDevToolsOpened();
   }
   return false;
+});
+
+// Get content file path (from writable location if hot-updated)
+ipcMain.handle('get-content-path', (event, filename) => {
+  if (hotUpdater) {
+    return hotUpdater.getContentPath(filename);
+  }
+  return path.join(__dirname, filename);
 });
 
 // Hot update function
