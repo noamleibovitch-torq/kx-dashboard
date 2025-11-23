@@ -55,6 +55,22 @@ app.whenReady().then(() => {
   // Check for updates (only in production)
   if (app.isPackaged) {
     console.log('🔄 Checking for updates...');
+    
+    // Configure autoUpdater for private GitHub releases
+    const ghToken = process.env.GH_TOKEN;
+    if (ghToken) {
+      console.log('🔐 Using GitHub token for private releases');
+      autoUpdater.setFeedURL({
+        provider: 'github',
+        owner: 'noamleibovitch',
+        repo: 'KX-Dashboard',
+        private: true,
+        token: ghToken
+      });
+    } else {
+      console.warn('⚠️  GH_TOKEN not set - auto-update may fail for private releases');
+    }
+    
     setTimeout(() => {
       autoUpdater.checkForUpdatesAndNotify();
     }, 3000); // Check 3 seconds after app starts
@@ -97,7 +113,7 @@ ipcMain.handle('get-app-version', () => {
 // Get environment variables (securely from main process)
 ipcMain.handle('get-env', (event, key) => {
   // Only allow specific environment variables
-  const allowedKeys = ['TORQ_WEBHOOK_URL', 'TORQ_AUTH_SECRET', 'USE_MOCK_DATA'];
+  const allowedKeys = ['TORQ_WEBHOOK_URL', 'TORQ_AUTH_SECRET', 'USE_MOCK_DATA', 'GH_TOKEN'];
   if (allowedKeys.includes(key)) {
     return process.env[key];
   }

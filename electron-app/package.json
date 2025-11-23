@@ -33,7 +33,7 @@
       "provider": "github",
       "owner": "noamleibovitch",
       "repo": "KX-Dashboard",
-      "private": false,
+      "private": true,
       "releaseType": "release"
     },
     "mac": {
@@ -62,7 +62,8 @@
       "queries.js",
       "index.html",
       "styles.css",
-      "assets/**/*"
+      "assets/**/*",
+      ".env"
     ]
   },
   "repository": {
