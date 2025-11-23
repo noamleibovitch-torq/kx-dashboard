@@ -21,6 +21,7 @@ class DashboardApp {
     this.showWeather = this.loadWeatherToggle();
     this.showClock = this.loadClockToggle();
     this.showConsole = this.loadConsoleToggle();
+    this.theme = this.loadTheme(); // 'dark', 'light', or 'auto'
     this.trendChart = null;
     this.guidesChart = null; // For top guides stacked bar chart
     this.segmentsPieChart = null;
@@ -61,6 +62,7 @@ class DashboardApp {
     this.loadWeather();
     this.startAutoRotation(); // Start auto-rotation if enabled
     this.updateWidgetVisibility(); // Apply visibility settings
+    this.applyTheme(); // Apply theme on startup
     this.applyConsoleSettings(); // Apply console settings on startup
     this.setupUpdateListeners(); // Listen for auto-update events
     this.loadAppVersion(); // Display app version in footer
@@ -139,6 +141,58 @@ class DashboardApp {
 
   saveConsoleToggle(show) {
     localStorage.setItem('showConsole', show.toString());
+  }
+
+  loadTheme() {
+    const saved = localStorage.getItem('theme');
+    return saved || 'dark'; // Default: dark
+  }
+
+  saveTheme(theme) {
+    localStorage.setItem('theme', theme);
+  }
+
+  applyTheme(theme = this.theme) {
+    // If auto, detect system preference
+    if (theme === 'auto') {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      theme = prefersDark ? 'dark' : 'light';
+      console.log('🎨 Auto theme detected:', theme);
+    }
+
+    // Apply theme class to body
+    if (theme === 'light') {
+      document.body.classList.add('light-mode');
+      console.log('☀️  Light mode activated');
+    } else {
+      document.body.classList.remove('light-mode');
+      console.log('🌙 Dark mode activated');
+    }
+
+    // Redraw charts with new theme colors
+    this.updateChartsForTheme();
+  }
+
+  updateChartsForTheme() {
+    // Redraw all active charts to use the new theme colors
+    if (this.trendChart) {
+      this.trendChart.update();
+    }
+    if (this.guidesChart) {
+      this.guidesChart.update();
+    }
+    if (this.segmentsPieChart) {
+      this.segmentsPieChart.update();
+    }
+    if (this.enrollmentTrendChart) {
+      this.enrollmentTrendChart.update();
+    }
+    if (this.docTrendChart) {
+      this.docTrendChart.update();
+    }
+    if (this.docEngagementChart) {
+      this.docEngagementChart.update();
+    }
   }
 
   calculateDaysBack(period) {
@@ -320,6 +374,26 @@ class DashboardApp {
         }
       });
     }
+
+    // Theme selector
+    const themeSelector = document.getElementById('themeSelector');
+    if (themeSelector) {
+      themeSelector.value = this.theme;
+      themeSelector.addEventListener('change', (e) => {
+        console.log('🎨 Theme changed to:', e.target.value);
+        this.theme = e.target.value;
+        this.saveTheme(e.target.value);
+        this.applyTheme(e.target.value);
+      });
+    }
+    
+    // Listen for system theme changes when in auto mode
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+      if (this.theme === 'auto') {
+        console.log('🎨 System theme changed, reapplying auto theme');
+        this.applyTheme('auto');
+      }
+    });
 
     // Update interval setting
     const updateInterval = document.getElementById('updateInterval');

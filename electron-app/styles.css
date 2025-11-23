@@ -1,10 +1,11 @@
-/* KX Dashboard - Dark Mode Styles */
+/* KX Dashboard - Theme Styles */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* Dark Mode (Default) */
 :root {
   --bg-primary: #0D0D0D;
   --bg-secondary: rgba(255, 255, 255, 0.02);
@@ -12,10 +13,50 @@
   --border-color: rgba(255, 255, 255, 0.1);
   --text-primary: #FFFFFF;
   --text-secondary: #999999;
+  --text-tertiary: #666666;
   --accent-cyan: #00D9FF;
   --accent-green: #00FF88;
   --accent-pink: #FF006E;
   --shadow: rgba(0, 0, 0, 0.3);
+  --view-btn-active-bg: #FFFFFF;
+  --view-btn-active-text: #0D0D0D;
+  --negative-text: #FFE0E0;
+  --negative-bg: rgba(255, 23, 68, 0.25);
+  --negative-border: rgba(255, 23, 68, 0.9);
+  --negative-glow: rgba(255, 23, 68, 0.4);
+  --positive-text: #E0FFE0;
+  --positive-bg: rgba(0, 255, 136, 0.2);
+  --positive-border: rgba(0, 255, 136, 0.8);
+  --positive-glow: rgba(0, 255, 136, 0.4);
+  --overlay-bg: rgba(0, 0, 0, 0.85);
+  --modal-bg: #1A1A1A;
+}
+
+/* Light Mode */
+body.light-mode {
+  --bg-primary: #FFFFFF;
+  --bg-secondary: rgba(0, 0, 0, 0.02);
+  --bg-card: rgba(0, 0, 0, 0.03);
+  --border-color: rgba(0, 0, 0, 0.1);
+  --text-primary: #0D0D0D;
+  --text-secondary: #666666;
+  --text-tertiary: #999999;
+  --accent-cyan: #0099CC;
+  --accent-green: #00AA55;
+  --accent-pink: #CC0055;
+  --shadow: rgba(0, 0, 0, 0.1);
+  --view-btn-active-bg: #0D0D0D;
+  --view-btn-active-text: #FFFFFF;
+  --negative-text: #CC0055;
+  --negative-bg: rgba(255, 23, 68, 0.08);
+  --negative-border: rgba(255, 23, 68, 0.3);
+  --negative-glow: rgba(255, 23, 68, 0.15);
+  --positive-text: #00AA55;
+  --positive-bg: rgba(0, 255, 136, 0.08);
+  --positive-border: rgba(0, 255, 136, 0.3);
+  --positive-glow: rgba(0, 255, 136, 0.15);
+  --overlay-bg: rgba(255, 255, 255, 0.95);
+  --modal-bg: #F5F5F5;
 }
 
 body {
@@ -52,6 +93,12 @@ body {
   height: 40px;
   width: auto;
   object-fit: contain;
+  transition: filter 0.3s;
+}
+
+/* Invert logo in light mode (logo is white on transparent, needs to be dark on light bg) */
+body.light-mode .header-logo {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9);
 }
 
 /* View Switcher */
@@ -81,8 +128,8 @@ body {
 }
 
 .view-btn.active {
-  background: #FFFFFF;
-  color: #0D0D0D;
+  background: var(--view-btn-active-bg);
+  color: var(--view-btn-active-text);
   font-weight: 600;
 }
 
@@ -409,17 +456,17 @@ body {
 }
 
 .kpi-delta.positive {
-  color: #E0FFE0;  /* Much lighter green - almost white with green tint */
-  background: rgba(0, 255, 136, 0.2);  /* Darker background - reduced from 0.35 */
-  border: 2px solid rgba(0, 255, 136, 0.8);  /* More opaque border */
-  box-shadow: 0 0 12px rgba(0, 255, 136, 0.4);  /* Stronger glow */
+  color: var(--positive-text);
+  background: var(--positive-bg);
+  border: 2px solid var(--positive-border);
+  box-shadow: 0 0 12px var(--positive-glow);
 }
 
 .kpi-delta.negative {
-  color: #FFE0E0;  /* Much lighter red - almost white with red tint */
-  background: rgba(255, 23, 68, 0.25);  /* Darker background - reduced from 0.4 */
-  border: 2px solid rgba(255, 23, 68, 0.9);  /* More opaque border */
-  box-shadow: 0 0 12px rgba(255, 23, 68, 0.4);  /* Stronger glow */
+  color: var(--negative-text);
+  background: var(--negative-bg);
+  border: 2px solid var(--negative-border);
+  box-shadow: 0 0 12px var(--negative-glow);
 }
 
 .kpi-delta .previous-value {
@@ -1061,7 +1108,7 @@ canvas {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--overlay-bg);
   backdrop-filter: blur(5px);
   z-index: 1000;
   align-items: center;
@@ -1073,13 +1120,12 @@ canvas {
 }
 
 .modal-content {
-  background: linear-gradient(135deg, #1A1A1A 0%, #0D0D0D 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--modal-bg);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   min-width: 400px;
   max-width: 500px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5),
-              0 0 20px rgba(0, 217, 255, 0.1);
+  box-shadow: 0 8px 32px var(--shadow);
   animation: modalSlideIn 0.3s ease;
 }
 
