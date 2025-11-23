@@ -627,12 +627,16 @@ class DashboardApp {
         delta: null
       },
       {
-        label: 'Avg Solve Time',
-        sublabel: `Today vs ${enrollments.window.days_back}d Period`,
-        value: `${labs.today.avg_resolve_hours.toFixed(1)}/${labs.current.avg_resolve_hours.toFixed(1)}`,
+        label: 'Today\'s Avg Solve Time',
+        sublabel: null,
+        value: labs.today.avg_resolve_hours.toFixed(1),
         previousValue: null,
         delta: null,
-        suffix: 'h'
+        suffix: 'h',
+        weeklyInfo: {
+          value: labs.current.avg_resolve_hours.toFixed(1),
+          label: `${enrollments.window.days_back}d Average`
+        }
       }
     ];
 
@@ -640,19 +644,24 @@ class DashboardApp {
     document.getElementById('kpiGrid').innerHTML = html;
   }
 
-  createKPICard({ label, sublabel, value, previousValue, delta, suffix = '' }) {
+  createKPICard({ label, sublabel, value, previousValue, delta, suffix = '', weeklyInfo = null }) {
     const deltaHTML = delta ? `
       <div class="kpi-delta ${delta.abs >= 0 ? 'positive' : 'negative'}">
         <span class="previous-value">${previousValue}${suffix}</span>
         <span>${delta.abs >= 0 ? '↑' : '↓'} ${delta.abs >= 0 ? '+' : ''}${Math.abs(delta.abs)}${suffix}</span>
         ${delta.percent !== null && delta.percent !== undefined ? `<span>(${delta.percent >= 0 ? '+' : ''}${delta.percent}%)</span>` : ''}
       </div>
-    ` : '<div style="height: 24px;"></div>';
+    ` : weeklyInfo ? `
+      <div class="kpi-info-box">
+        <span class="info-label">${weeklyInfo.label}</span>
+        <span class="info-value">${weeklyInfo.value}${suffix}</span>
+      </div>
+    ` : '<div class="kpi-delta-spacer"></div>';
 
     return `
       <div class="kpi-card">
         <div class="kpi-label">${label}</div>
-        <div class="kpi-sublabel">${sublabel}</div>
+        <div class="kpi-sublabel">${sublabel || ''}</div>
         <div class="kpi-value">
           ${value}${suffix ? `<span class="suffix">${suffix}</span>` : ''}
         </div>
@@ -1105,12 +1114,12 @@ class DashboardApp {
         ${renderDelta(doc.support_delta?.active_users, doc.support_previous?.active_users, 0, '', false)}
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Tickets Amount</div>
+        <div class="kpi-label">Ticket Amount</div>
         <div class="kpi-value">${formatNumber(doc.support?.tickets_amount)}</div>
         ${renderDelta(doc.support_delta?.tickets_amount, doc.support_previous?.tickets_amount, 0, '', true)}
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Tickets Volume</div>
+        <div class="kpi-label">Ticket Volume</div>
         <div class="kpi-value">${formatNumber(doc.support?.tickets_volume_percent, 2)}<span class="suffix">%</span></div>
         ${renderDelta(doc.support_delta?.tickets_volume_percent, doc.support_previous?.tickets_volume_percent, 2, '%', true)}
       </div>
@@ -1194,7 +1203,7 @@ class DashboardApp {
             hidden: savedFilters['Total Active Users'] === true
           },
           {
-            label: 'Total Tickets Amount',
+            label: 'Total Ticket Amount',
             data: totalTicketsAmount,
             borderColor: '#FF6B6B',
             backgroundColor: 'rgba(255, 107, 107, 0.1)',
@@ -1206,7 +1215,7 @@ class DashboardApp {
             pointBorderColor: '#FFFFFF',
             pointBorderWidth: 2,
             yAxisID: 'y',
-            hidden: savedFilters['Total Tickets Amount'] === true
+            hidden: savedFilters['Total Ticket Amount'] === true
           },
           {
             label: 'Total Conversations',
@@ -1410,7 +1419,7 @@ class DashboardApp {
             hidden: savedFilters['Deflection Rate'] === true
           },
           {
-            label: 'Tickets Volume',
+            label: 'Ticket Volume',
             data: ticketsVolume,
             borderColor: '#FF006E',
             backgroundColor: 'rgba(255, 0, 110, 0.15)',
@@ -1422,7 +1431,7 @@ class DashboardApp {
             pointBorderColor: '#FFFFFF',
             pointBorderWidth: 2,
             yAxisID: 'y',
-            hidden: savedFilters['Tickets Volume'] === true
+            hidden: savedFilters['Ticket Volume'] === true
           }
         ]
       },

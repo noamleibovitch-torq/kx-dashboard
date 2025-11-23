@@ -351,38 +351,44 @@ body {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 10px;
-  padding: 12px 14px;  /* Increased padding for bigger content */
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  min-height: 160px;  /* Increased from 140px for 56px values */
-  gap: 4px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 160px;
+  gap: 0;  /* Remove gap, use fixed spacing */
 }
 
 .kpi-label {
-  font-size: 18px;  /* Increased from 15px */
-  font-weight: 700;  /* Increased from 600 */
-  color: #FFFFFF;  /* Bright white instead of #E0E0E0 */
+  font-size: 18px;
+  font-weight: 700;
+  color: #FFFFFF;
   text-transform: uppercase;
   letter-spacing: 1.2px;
-  min-height: 32px;
+  height: 48px;  /* Fixed height instead of min-height */
   display: flex;
   align-items: flex-start;
+  flex-shrink: 0;
 }
 
 .kpi-sublabel {
-  font-size: 15px;  /* Increased from 13px */
-  font-weight: 700;  /* Increased from 600 */
+  font-size: 15px;
+  font-weight: 700;
   color: var(--accent-cyan);
+  height: 24px;  /* Fixed height instead of min-height */
   margin-bottom: 8px;
+  flex-shrink: 0;
 }
 
 .kpi-value {
-  font-size: 56px;  /* Increased from 48px */
+  font-size: 56px;
   font-weight: bold;
   color: var(--text-primary);
-  line-height: 1.2;
+  line-height: 1;
   display: flex;
-  align-items: center;
+  align-items: baseline;
+  height: 60px;  /* Fixed height */
+  margin-bottom: 8px;
+  flex-shrink: 0;
 }
 
 .kpi-value .suffix {
@@ -424,6 +430,40 @@ body {
 
 .kpi-delta span {
   white-space: nowrap;
+}
+
+/* Spacer for cards without delta/info box - maintains alignment */
+.kpi-delta-spacer {
+  height: 44px;  /* Same height as delta/info boxes */
+  flex-shrink: 0;
+}
+
+/* Info box - for informational data like weekly average (no sentiment) */
+.kpi-info-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #E0E0E0;  /* Neutral light gray */
+  background: rgba(100, 100, 100, 0.2);  /* Neutral gray background */
+  border: 2px solid rgba(150, 150, 150, 0.5);  /* Neutral border */
+  box-shadow: 0 0 8px rgba(150, 150, 150, 0.2);  /* Subtle glow */
+}
+
+.kpi-info-box .info-label {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.8;
+  color: #B0B0B0;
+}
+
+.kpi-info-box .info-value {
+  font-size: 16px;
+  font-weight: 800;
+  color: #FFFFFF;
 }
 
 /* Enrollments Row */
