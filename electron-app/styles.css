@@ -1234,6 +1234,39 @@ canvas {
   accent-color: var(--accent-cyan);
 }
 
+.update-check-btn {
+  width: 100%;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-green) 100%);
+  border: none;
+  border-radius: 8px;
+  color: #0D0D0D;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 217, 255, 0.3);
+}
+
+.update-check-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 217, 255, 0.4);
+}
+
+.update-check-btn:active {
+  transform: translateY(0);
+}
+
+.update-check-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+body.light-mode .update-check-btn {
+  color: #FFFFFF;
+}
+
 .cache-info {
   cursor: pointer;
   padding: 2px 6px;

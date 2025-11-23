@@ -387,6 +387,35 @@ class DashboardApp {
       });
     }
     
+    // Check for updates now button
+    const checkUpdatesBtn = document.getElementById('checkUpdatesNow');
+    const checkUpdatesText = document.getElementById('checkUpdatesText');
+    if (checkUpdatesBtn && window.electronAPI && window.electronAPI.checkForUpdates) {
+      checkUpdatesBtn.addEventListener('click', async () => {
+        console.log('🔄 Manual update check triggered');
+        checkUpdatesBtn.disabled = true;
+        checkUpdatesText.textContent = 'Checking...';
+        
+        try {
+          await window.electronAPI.checkForUpdates();
+          console.log('✅ Update check initiated');
+          
+          // Reset button after 3 seconds
+          setTimeout(() => {
+            checkUpdatesBtn.disabled = false;
+            checkUpdatesText.textContent = 'Check for Updates Now';
+          }, 3000);
+        } catch (error) {
+          console.error('❌ Update check failed:', error);
+          checkUpdatesText.textContent = 'Check Failed - Try Again';
+          setTimeout(() => {
+            checkUpdatesBtn.disabled = false;
+            checkUpdatesText.textContent = 'Check for Updates Now';
+          }, 3000);
+        }
+      });
+    }
+    
     // Listen for system theme changes when in auto mode
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
       if (this.theme === 'auto') {
