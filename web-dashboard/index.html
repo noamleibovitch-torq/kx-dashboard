@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self' https://wttr.in; font-src 'self'; img-src 'self' data:;">
+  <title>KX Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <p>Loading dashboard...</p>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-logo-text">KX Dashboard</div>
+      
+      <!-- View Switcher -->
+      <div class="view-switcher">
+        <button class="view-btn active" data-view="academy">Academy</button>
+        <button class="view-btn" data-view="documentation">Documentation</button>
+      </div>
+
+      <!-- Segment Filter (Academy Only) -->
+      <div id="segmentFilter" class="segment-filter" style="display: none;">
+        <span class="filter-label">Filtered by:</span>
+        <span class="filter-segment" id="filterSegmentName"></span>
+        <button id="clearFilter" class="clear-filter-btn">✕</button>
+      </div>
+
+      <!-- Right Side Info (Period Controls, Weather & Clock) -->
+      <div class="header-right">
+        <!-- Academy Period Controls -->
+        <div id="academyControls" class="controls">
+          <div class="days-back-control">
+            <label>Period:</label>
+            <div class="period-selector">
+              <button class="period-btn active" data-period="7">7d</button>
+              <button class="period-btn" data-period="MTD">MTD</button>
+              <button class="period-btn" data-period="30">30d</button>
+              <button class="period-btn" data-period="Q">Q</button>
+              <button class="period-btn" data-period="YTD">YTD</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Documentation Period Controls -->
+        <div id="docControls" class="controls" style="display: none;">
+          <div class="days-back-control">
+            <label>Period:</label>
+            <div class="period-selector">
+              <button class="doc-period-btn active" data-doc-period="mtd">MTD</button>
+              <button class="doc-period-btn" data-doc-period="prev">Prev Mo</button>
+            </div>
+          </div>
+        </div>
+        <!-- Weather Widget -->
+        <div class="header-weather" id="headerWeather">
+          <div class="weather-icon">☀️</div>
+          <div class="weather-info">
+            <div class="weather-temp">--°C</div>
+            <div class="weather-location">Loading...</div>
+          </div>
+        </div>
+        
+        <!-- Clock -->
+        <div class="header-clock" id="headerClock">
+          <div class="clock-time"></div>
+          <div class="clock-date"></div>
+        </div>
+      </div>
+    </div>
+
+  <!-- Error Banner -->
+  <div class="error-banner" id="errorBanner">
+    <span class="icon">⚠️</span>
+    <span id="errorMessage"></span>
+  </div>
+
+    <!-- Academy View -->
+    <div id="academyView" class="view-content active">
+      <!-- KPI Summary -->
+      <div class="section">
+        <h2 class="section-title">Key Metrics</h2>
+        <div class="kpi-grid" id="kpiGrid">
+          <!-- KPI cards will be inserted here -->
+        </div>
+      </div>
+
+      <!-- Enrollments Section -->
+      <div class="section">
+      <h2 class="section-title">Enrollments</h2>
+      <div class="enrollments-row">
+        <!-- Top Guides -->
+        <div class="subsection enrollments-chart-col">
+          <h3 class="subsection-title">Top Guides</h3>
+          <div id="guidesChart" class="guides-list">
+            <!-- Guide bars will be inserted here -->
+          </div>
+        </div>
+
+        <!-- Segments Pie Chart -->
+        <div class="subsection enrollments-chart-col">
+          <h3 class="subsection-title">Segments</h3>
+          <div class="segments-vertical">
+            <div class="segments-pie-container">
+              <canvas id="segmentsPieChart"></canvas>
+            </div>
+            <div id="segmentsLegend" class="segments-legend-horizontal">
+              <!-- Legend will be inserted here -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Daily Trends (Enrollments + Labs) -->
+        <div class="subsection enrollments-chart-col">
+          <h3 class="subsection-title">Daily Trends</h3>
+          <div class="dual-trends">
+            <div class="trend-item">
+              <div class="trend-label">Enrollments</div>
+              <div class="chart-container-small">
+                <canvas id="enrollmentTrendChart"></canvas>
+              </div>
+            </div>
+            <div class="trend-item">
+              <div class="trend-label">Labs Activity</div>
+              <div class="chart-container-small">
+                <canvas id="trendChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+    <!-- End Academy View -->
+
+    <!-- Documentation View -->
+    <div id="documentationView" class="view-content">
+      <!-- All Documentation Metrics in One Row -->
+      <div class="section">
+        <h2 class="section-title" id="docPeriodTitle">Documentation Metrics</h2>
+        <div class="doc-metrics-grid" id="docMetricsGrid">
+          <!-- All 6 KPI cards will be inserted here in one row -->
+        </div>
+      </div>
+
+      <!-- Documentation Trends -->
+      <div class="section">
+        <h2 class="section-title">Total Numbers Trend (12 Months)</h2>
+        <div class="chart-container">
+          <canvas id="docTrendChart"></canvas>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2 class="section-title">Rates Trend (12 Months)</h2>
+        <div class="chart-container">
+          <canvas id="docEngagementChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <!-- End Documentation View -->
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-content">
+      <div class="last-updated" id="lastUpdated">
+        Loading... <span id="cacheInfo" class="cache-info" title="Data refreshed automatically by GitHub Actions"></span>
+      </div>
+      <div class="footer-version" id="appVersion">Web v1.0.0</div>
+      <button class="settings-btn" id="settingsBtn" title="Settings">⚙️</button>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal" id="settingsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Dashboard Settings</h2>
+        <button class="modal-close" id="closeSettings">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-group">
+          <label class="setting-label">
+            <span>Auto-rotate between tabs:</span>
+            <select id="rotateInterval" class="setting-select">
+              <option value="0">Disabled</option>
+              <option value="30">Every 30 seconds</option>
+              <option value="60">Every 60 seconds</option>
+              <option value="120">Every 2 minutes</option>
+              <option value="300">Every 5 minutes</option>
+            </select>
+          </label>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label">
+            <input type="checkbox" id="showWeather" class="setting-checkbox" checked>
+            <span>Show weather widget</span>
+          </label>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label">
+            <input type="checkbox" id="showClock" class="setting-checkbox" checked>
+            <span>Show clock</span>
+          </label>
+        </div>
+        <div class="setting-group">
+          <label class="setting-label">
+            <span>Auto-refresh data:</span>
+            <select id="dataRefreshInterval" class="setting-select">
+              <option value="0">Manual only</option>
+              <option value="5">Every 5 minutes</option>
+              <option value="15">Every 15 minutes</option>
+              <option value="30">Every 30 minutes</option>
+              <option value="60" selected>Every hour</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <script src="queries.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>
+
