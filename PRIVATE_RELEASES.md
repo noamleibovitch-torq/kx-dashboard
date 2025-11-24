@@ -270,3 +270,4 @@ npm start
 4. Build and install on display
 5. Test auto-update with v1.0.1
 
+

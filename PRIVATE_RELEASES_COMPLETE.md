@@ -245,3 +245,4 @@ cd electron-app && npm run build:mac
 
 **Output:** `dist/KX Dashboard-1.0.0-arm64.dmg` (ready to install!)
 
+

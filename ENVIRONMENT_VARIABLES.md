@@ -209,3 +209,4 @@ Your existing hardcoded credentials have been:
 
 **Security Note:** Your `.env` file contains real credentials and is automatically ignored by Git. Never commit it to the repository.
 
+

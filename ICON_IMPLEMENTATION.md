@@ -105,3 +105,4 @@ When users install the app:
 
 **Note**: The app is unsigned, so users need to right-click → Open on first launch to bypass macOS Gatekeeper warnings.
 
+

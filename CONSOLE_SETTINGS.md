@@ -98,3 +98,4 @@ The built app will be in `electron-app/dist/`.
 - Console state is checked and applied on every app startup
 - Setting is stored locally in browser's localStorage (per-machine)
 
+
